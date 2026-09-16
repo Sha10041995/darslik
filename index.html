@@ -5527,7 +5527,13 @@ alu:{ t:"ALU va bayroqlar simulyatori", h:"Operandlar va amalni tanlang — nati
    Darslik Apps Script orqali ochilganda avtomatik server rejimiga o'tadi.
    Oddiy faylda ochilsa, hamma narsa avvalgidek lokal ishlaydi.
    ===================================================================== */
-let SESSION_PW = "";                       /* joriy seans paroli — faqat xotirada */
+/* Joriy seans paroli. sessionStorage da saqlanadi: sahifa yangilanganda
+   yo'qolmaydi, brauzer yopilganda esa o'chib ketadi. */
+let SESSION_PW = (function(){ try { return sessionStorage.getItem("mpt.spw") || ""; } catch(e){ return ""; } })();
+function setSessionPw(p){
+  SESSION_PW = p || "";
+  try { p ? sessionStorage.setItem("mpt.spw", p) : sessionStorage.removeItem("mpt.spw"); } catch(e){}
+}
 const QKEY = "mpt.queue.v1";
 
 /* ---------------------------------------------------------------
@@ -5702,7 +5708,7 @@ function paintNav(){
    ? `<span class="who">${esc(u.ism)} ${esc(u.familiya)}</span>${u.avatar?`<img class="avatar" src="${u.avatar}" alt="">`:""}<button class="btn sm ghost" id="out">Chiqish</button>`
    : `<button class="btn sm ghost" id="tolog">Kirish</button><button class="btn sm" id="toreg">Ro'yxatdan o'tish</button>`)
    + `<span class="badge" id="cloudb">lokal</span>`;
-  if(u) $("#out").onclick=()=>{ S.session=null; SESSION_PW=""; save(); applyTheme(); go("#/"); };
+  if(u) $("#out").onclick=()=>{ S.session=null; setSessionPw(""); save(); applyTheme(); go("#/"); };
   else { $("#tolog").onclick=()=>go("#/login"); $("#toreg").onclick=()=>go("#/register"); }
   cloudBadge();
   const items=navItems();
@@ -5754,7 +5760,7 @@ function vLogin(){
    <p class="sub" style="margin:14px 0 0">Hisobingiz yo'qmi? <a href="#/register">Ro'yxatdan o'ting</a>.</p></div>`);
 }
 function afterLogin(){
-  const kir=(u,pw)=>{ S.session=u.login; SESSION_PW=pw; userData(u.login).lastSeen=nowISO(); save(); applyTheme();
+  const kir=(u,pw)=>{ S.session=u.login; setSessionPw(pw); userData(u.login).lastSeen=nowISO(); save(); applyTheme();
     if(Cloud.on && u.role!=="admin") cloudPullMe(u.login,pw).catch(()=>{});
     if(Cloud.on) cloudPush("faollik",{});
     qFlush();
@@ -5818,7 +5824,7 @@ function afterRegister(){
     const salt=salty();
     const yangi={login:lg,hash:hashPw(pw,salt),salt,pw,role:"student",ism,familiya:fam,sharif:shr,guruh:grp,avatar,created:nowISO()};
 
-    const tugat=()=>{ S.users.push(yangi); S.session=lg; SESSION_PW=pw; userData(lg); save(); applyTheme();
+    const tugat=()=>{ S.users.push(yangi); S.session=lg; setSessionPw(pw); userData(lg); save(); applyTheme();
       toast("Hisob yaratildi"); go("#/dash"); };
 
     if(Cloud.on){
@@ -6076,7 +6082,7 @@ function afterProfile(){
     if(p1.length<5) return $("#m").innerHTML=`<div class="msg err">Yangi parol kamida 5 ta belgidan iborat bo'lsin.</div>`;
     u.salt=salty(); u.hash=hashPw(p1,u.salt);
     if(u.role!=="admin") u.pw=p1;
-    const eskiPw=SESSION_PW; SESSION_PW=p1; save();
+    const eskiPw=SESSION_PW; setSessionPw(p1); save();
     if(Cloud.on) Cloud.raw("parol",{login:u.login,pw:eskiPw,yangiPw:p1}).catch(()=>{ });
     $("#m").innerHTML=`<div class="msg ok">Parol yangilandi.</div>`; };
 }
@@ -6254,22 +6260,42 @@ function vAdmin(){
   }
   return page(`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
      <div><h1>Admin panel</h1><p class="sub">O'qituvchi uchun boshqaruv va monitoring</p></div>
-     <button class="btn ghost" id="pull">Serverdan yangilash</button></div>
+     <div style="text-align:right"><button class="btn ghost" id="pull">Serverdan yangilash</button>
+       <div class="sub" style="margin:6px 0 0;font-size:12.5px">rejim: ${Cloud.on?"server":"lokal"}</div></div></div>
    <div id="pm">${ADMIN_MSG}</div>
    <div class="tabs">${tabs.map(([k,n])=>`<button data-tab="${k}" class="${ADMIN_TAB===k?"on":""}">${n}</button>`).join("")}</div>${body}`);
 }
 function afterAdmin(){
-  $("#pull").onclick=async ()=>{
-    if(!Cloud.on){ ADMIN_MSG=`<div class="msg err">Darslik server rejimida ochilmagan — ma'lumot faqat shu qurilmada.</div>`;
-      $("#pm").innerHTML=ADMIN_MSG; return; }
+  const tortish=async ()=>{
     $("#pull").disabled=true; $("#pull").textContent="Yuklanmoqda...";
     try{ const r=await cloudPullAll();
       ADMIN_MSG=`<div class="msg ok">Baza yangilandi: ${students().length} talaba, ${r.natija||0} natija, ${r.hisobot||0} hisobot, ${r.rasm||0} rasm. (${dstr(nowISO())})</div>`;
       render();
     }catch(e){ $("#pull").disabled=false; $("#pull").textContent="Serverdan yangilash";
-      ADMIN_MSG=`<div class="msg err">${esc(e.message||"Serverga ulanib bo'lmadi")}</div>`;
-      $("#pm").innerHTML=ADMIN_MSG; }
+      const m=e.message||"Serverga ulanib bo'lmadi";
+      ADMIN_MSG=`<div class="msg err">${esc(m)}</div>`;
+      $("#pm").innerHTML=ADMIN_MSG; toast(m,true); }
   };
+
+  $("#pull").onclick=()=>{
+    if(!Cloud.on){ ADMIN_MSG=`<div class="msg err">Darslik server rejimida ochilmagan — ma'lumot faqat shu qurilmada saqlanmoqda.</div>`;
+      $("#pm").innerHTML=ADMIN_MSG; return; }
+    if(!cred().pw){        /* sahifa yangilangan — parolni qayta so'raymiz */
+      ADMIN_MSG=`<div class="msg err">Xavfsizlik uchun parolingizni qayta kiriting.
+        <div class="row" style="margin-top:8px"><input id="repw" type="password" placeholder="Parol">
+        <button class="btn sm" id="reok" style="flex:0 0 auto">Tasdiqlash</button></div></div>`;
+      render(); return;
+    }
+    tortish();
+  };
+
+  if($("#reok")) $("#reok").onclick=()=>{
+    const v=$("#repw").value;
+    if(!v) return;
+    setSessionPw(v); ADMIN_MSG=""; render();
+    setTimeout(()=>{ const b=$("#pull"); if(b) b.click(); }, 60);
+  };
+  if($("#repw")) $("#repw").onkeydown=e=>{ if(e.key==="Enter") $("#reok").click(); };
   $$("[data-tab]").forEach(b=>b.onclick=()=>{ ADMIN_TAB=b.dataset.tab; render(); });
   $$("[data-u]").forEach(b=>b.onclick=()=>showStudent(b.dataset.u));
   $$("[data-ex]").forEach(b=>b.onclick=()=>{ const [lg,s]=b.dataset.ex.split("|"); showExam(lg,s); });

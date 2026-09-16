@@ -5537,13 +5537,20 @@ function setSessionPw(p){
 const QKEY = "mpt.queue.v1";
 
 /* ---------------------------------------------------------------
-   SERVER HAVOLASI.
-   Darslik Apps Script ichidan ochilsa, bu qator bo'sh qolaveradi.
-   Agar faylni boshqa joyga (GitHub Pages, sayt, Drive) joylasangiz,
-   Apps Script dagi /exec havolasini shu yerga qo'ying, masalan:
-   const MPT_API = "https://script.google.com/macros/s/AKfy.../exec";
+   SERVER HAVOLASI (Apps Script /exec manzili).
+   Darslik Apps Script ichidan ochilsa, bu qator ishlatilmaydi.
+   Boshqa joyga (GitHub Pages, sayt) joylashtirilganda ana shu havola
+   orqali baza bilan bog'lanadi. Havolani admin panelidan ham
+   o'zgartirish mumkin — u brauzer xotirasida saqlanadi.
    --------------------------------------------------------------- */
-const MPT_API = "";
+const MPT_API_ASOSIY = "https://script.google.com/macros/s/AKfycbxSymoG69B-ueNyisY4klp7GF0llGNwZ0QTUhVBK8h0aO0QV5WuwINkCMN2S0gpYE0m/exec";
+let MPT_API = (function(){ try { return localStorage.getItem("mpt.api") || MPT_API_ASOSIY; }
+                           catch(e){ return MPT_API_ASOSIY; } })();
+function setApi(u){
+  MPT_API = (u || "").trim();
+  try { MPT_API ? localStorage.setItem("mpt.api", MPT_API) : localStorage.removeItem("mpt.api"); } catch(e){}
+  cloudBadge();
+}
 
 const Cloud = {
   /* Apps Script muhitida google.script.run mavjud bo'ladi.
@@ -5554,27 +5561,34 @@ const Cloud = {
   raw(action, payload){
     const sorov = JSON.stringify(Object.assign({ action }, payload));
     if(!Cloud.gs && MPT_API){                       /* havola orqali ishlash */
+      if(typeof fetch !== "function") return Promise.reject(aloqaXato());
       return fetch(MPT_API, { method:"POST", redirect:"follow",
           headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: sorov })
-        .then(res => res.text())
-        .then(txt => { let r; try{ r = JSON.parse(txt); }catch(e){ throw new Error("Javob formati xato"); }
-                       if(!r.ok) throw new Error(r.xato || "Server xatosi"); return r; });
+        .then(res => res.text(), () => { throw aloqaXato(); })
+        .then(txt => { let r; try{ r = JSON.parse(txt); }catch(e){ throw aloqaXato(); }
+                       if(!r.ok) throw serverXato(r.xato); return r; });
     }
     return new Promise((ok, err) => {
-      if(!Cloud.gs) return err(new Error("Server rejimi yoqilmagan"));
+      if(!Cloud.gs) return err(aloqaXato());
       let tugadi = false;
-      const t = setTimeout(()=>{ if(!tugadi){ tugadi=true; err(new Error("Server javob bermadi")); } }, 30000);
+      const t = setTimeout(()=>{ if(!tugadi){ tugadi=true; err(aloqaXato("Server javob bermadi")); } }, 30000);
       google.script.run
         .withSuccessHandler(txt => {
           if(tugadi) return; tugadi=true; clearTimeout(t);
-          let r; try { r = JSON.parse(txt); } catch(e){ return err(new Error("Javob formati xato")); }
-          r.ok ? ok(r) : err(new Error(r.xato || "Server xatosi"));
+          let r; try { r = JSON.parse(txt); } catch(e){ return err(aloqaXato()); }
+          r.ok ? ok(r) : err(serverXato(r.xato));
         })
-        .withFailureHandler(e => { if(tugadi) return; tugadi=true; clearTimeout(t); err(new Error(e && e.message ? e.message : String(e))); })
+        .withFailureHandler(e => { if(tugadi) return; tugadi=true; clearTimeout(t);
+          err(aloqaXato(e && e.message ? e.message : String(e))); })
         .api(sorov);
     });
   }
 };
+/* aloqa xatosi — internet yoki server yetib bormadi (lokal davom etsa bo'ladi)
+   server xatosi  — server javob berdi, lekin amalni rad etdi (masalan login band) */
+function aloqaXato(matn){ const e = new Error(matn || "Serverga ulanib bo'lmadi"); e.aloqa = true; return e; }
+function serverXato(matn){ const e = new Error(matn || "Server xatosi"); e.aloqa = false; return e; }
+
 const cred = () => { const u = me(); return u ? { login: u.login, pw: u.role === "admin" ? SESSION_PW : (u.pw || SESSION_PW) } : {}; };
 
 /* ---------- yuborilmagan amallar navbati ---------- */
@@ -5780,7 +5794,15 @@ function afterLogin(){
         u.salt=u.salt||salty(); u.hash=hashPw(pw,u.salt);
         if(u.role!=="admin") u.pw=pw;
         save(); kir(u,pw);
-      }catch(e){ xato(e.message||"Login yoki parol xato."); }
+      }catch(e){
+        if(e.aloqa){                      /* internet yo'q — lokal tekshiramiz */
+          const lu=S.users.find(x=>x.login===lg);
+          if(lu && lu.hash===hashPw(pw,lu.salt)){ kir(lu,pw);
+            toast("Internet yo'q: lokal ma'lumot bilan ishlayapsiz"); return; }
+          return xato("Serverga ulanib bo'lmadi. Internetni tekshiring.");
+        }
+        xato(e.message||"Login yoki parol xato.");
+      }
       return;
     }
 
@@ -5829,10 +5851,17 @@ function afterRegister(){
 
     if(Cloud.on){
       $("#rg").disabled=true; $("#rg").textContent="Yuborilmoqda...";
-      Cloud.raw("royxat",{user:{login:lg,pw,ism,familiya:fam,sharif:shr,guruh:grp,avatar}})
+      const paket={user:{login:lg,pw,ism,familiya:fam,sharif:shr,guruh:grp,avatar}};
+      Cloud.raw("royxat",paket)
         .then(()=>{ tugat(); })
-        .catch(e=>{ $("#rg").disabled=false; $("#rg").textContent="Hisob yaratish";
-          $("#m").innerHTML=`<div class="msg err">${esc(e.message||"Serverga ulanib bo'lmadi")}</div>`; });
+        .catch(e=>{
+          if(e.aloqa){                    /* internet yo'q — lokal davom etamiz */
+            qAdd("royxat",paket); tugat();
+            toast("Internet yo'q: hisob shu qurilmada yaratildi, ulanish tiklanganda serverga yuboriladi");
+            return;
+          }
+          $("#rg").disabled=false; $("#rg").textContent="Hisob yaratish";
+          $("#m").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; });
       return;
     }
     tugat();
@@ -6278,8 +6307,11 @@ function afterAdmin(){
   };
 
   $("#pull").onclick=()=>{
-    if(!Cloud.on){ ADMIN_MSG=`<div class="msg err">Darslik server rejimida ochilmagan — ma'lumot faqat shu qurilmada saqlanmoqda.</div>`;
-      $("#pm").innerHTML=ADMIN_MSG; return; }
+    if(!Cloud.on){ ADMIN_MSG=`<div class="msg err">Darslik server bilan bog'lanmagan — ma'lumot faqat shu qurilmada saqlanmoqda.
+        <div class="row" style="margin-top:8px"><input id="apiu" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(MPT_API)}">
+        <button class="btn sm" id="apiok" style="flex:0 0 auto">Saqlash</button></div>
+        <span class="sub" style="font-size:12.5px">Apps Script dagi <b>/exec</b> havolasini qo'ying.</span></div>`;
+      render(); return; }
     if(!cred().pw){        /* sahifa yangilangan — parolni qayta so'raymiz */
       ADMIN_MSG=`<div class="msg err">Xavfsizlik uchun parolingizni qayta kiriting.
         <div class="row" style="margin-top:8px"><input id="repw" type="password" placeholder="Parol">
@@ -6289,6 +6321,13 @@ function afterAdmin(){
     tortish();
   };
 
+  if($("#apiok")) $("#apiok").onclick=()=>{
+    const v=$("#apiu").value.trim();
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(v)){
+      toast("Havola /exec bilan tugashi kerak", true); return; }
+    setApi(v); ADMIN_MSG=`<div class="msg ok">Server havolasi saqlandi.</div>`; render();
+    setTimeout(()=>{ const b=$("#pull"); if(b) b.click(); }, 60);
+  };
   if($("#reok")) $("#reok").onclick=()=>{
     const v=$("#repw").value;
     if(!v) return;

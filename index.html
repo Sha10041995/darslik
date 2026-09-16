@@ -186,6 +186,16 @@ pre code{background:none; padding:0}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--rail); flex:none}
 .dot.part{background:var(--accent2)}
 .dot.done{background:var(--ok)}
+.lrow.yopiq{opacity:.55}
+.lrow.yopiq .nm{text-decoration:line-through}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.gal figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:8px}
+.gal img{width:100%;height:110px;object-fit:cover;border-radius:var(--r);cursor:pointer;background:var(--surface2)}
+.gal figcaption{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.35}
+.ruxsat{display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:14px}
+.ruxsat:last-child{border-bottom:0}
+.ruxsat input{width:auto}
+.ruxsat .nm{flex:1;min-width:0}
 
 /* ============ DARS MATNI ============ */
 .lesson{background:var(--surface); border:1px solid var(--line); border-radius:var(--r2); padding:22px}
@@ -371,7 +381,7 @@ const Store = {
 };
 
 /* ---------- global holat ---------- */
-const S = { users: [], data: {}, session: null };
+const S = { users: [], data: {}, session: null, access: { g: {}, u: {} } };
 /* Administrator hisobi: parol faqat xesh ko'rinishida saqlanadi,
    uning ochiq matni bu faylda hech qayerda yozilmagan. */
 const ADMIN_LOGIN = "sha10041995";
@@ -393,11 +403,39 @@ function ensureAdmin() {
 
 async function loadState() {
   const raw = await Store.get();
-  if (raw && raw.users) { S.users = raw.users; S.data = raw.data || {}; S.session = raw.session || null; }
+  if (raw && raw.users) { S.users = raw.users; S.data = raw.data || {}; S.session = raw.session || null;
+    S.access = raw.access || { g: {}, u: {} }; }
+  S.access = S.access || { g: {}, u: {} }; S.access.g = S.access.g || {}; S.access.u = S.access.u || {};
   ensureAdmin();
   save();
 }
-const save = () => Store.set({ users: S.users, data: S.data, session: S.session });
+const save = () => Store.set({ users: S.users, data: S.data, session: S.session, access: S.access });
+
+/* ---------- darslarga ruxsat ----------
+   S.access.g[darsId]  — barcha talabalar uchun umumiy holat
+   S.access.u[login][darsId] — bitta talaba uchun alohida holat (umumiydan ustun)
+   Yozuv bo'lmasa — dars ochiq deb hisoblanadi. */
+function darsOchiq(login, id) {
+  const shaxsiy = S.access.u[login] || {};
+  if (shaxsiy[id] !== undefined) return !!shaxsiy[id];
+  const umumiy = S.access.g[id];
+  return umumiy === undefined ? true : !!umumiy;
+}
+function ruxsatBer(id, holat, login) {
+  if (login) { (S.access.u[login] = S.access.u[login] || {})[id] = holat ? 1 : 0; }
+  else S.access.g[id] = holat ? 1 : 0;
+  save();
+  if (typeof cloudPush === "function") cloudPush("ruxsat", { items: [{ login: login || "*", darsId: id, holat: holat ? 1 : 0 }] });
+}
+function ruxsatBerKop(idlar, holat, login) {
+  const items = idlar.map(id => {
+    if (login) (S.access.u[login] = S.access.u[login] || {})[id] = holat ? 1 : 0;
+    else S.access.g[id] = holat ? 1 : 0;
+    return { login: login || "*", darsId: id, holat: holat ? 1 : 0 };
+  });
+  save();
+  if (typeof cloudPush === "function") cloudPush("ruxsat", { items });
+}
 
 function userData(login) {
   if (!S.data[login]) S.data[login] = { progress: {}, exam: {}, settings: { theme: "tech", bg: "" }, lastSeen: nowISO() };
@@ -5629,6 +5667,7 @@ async function cloudPullAll(){
   const admin = me();
   S.users = (r.users || []).concat(admin ? [admin] : []).filter((u,i,a) => a.findIndex(x=>x.login===u.login)===i);
   S.data = r.data || {};
+  if(r.access) S.access = { g: r.access.g || {}, u: r.access.u || {} };
   save();
   return r;
 }
@@ -5636,7 +5675,9 @@ async function cloudPullAll(){
 /* ---------- talaba uchun: o'z ma'lumotini tortib olish ---------- */
 async function cloudPullMe(login, pw){
   const r = await Cloud.raw("mening", { login, pw });
-  if(r.data){ S.data[login] = Object.assign(userData(login), r.data); save(); }
+  if(r.data){ S.data[login] = Object.assign(userData(login), r.data); }
+  if(r.access){ S.access.g = r.access.g || {}; S.access.u[login] = (r.access.u||{})[login] || {}; }
+  save();
   return r;
 }
 
@@ -5681,6 +5722,18 @@ function lessonState(login,id){
   if(p.test && p.test.score>=p.test.total*0.6) return "done";
   if(p.opened) return "part";
   return "none";
+}
+/* Imtihon: barcha darslar o'zlashtirilgandan keyin ochiladi.
+   Admin alohida ruxsat bersa (EXAM1/EXAM2), shart tekshirilmaydi. */
+function imtihonOchiq(login,sem){
+  const kalit="EXAM"+sem;
+  const shaxsiy=S.access.u[login]||{};
+  if(shaxsiy[kalit]!==undefined) return !!shaxsiy[kalit];
+  const ls=semLessons(sem);
+  return ls.length>0 && ls.every(l=>lessonState(login,l.id)==="done");
+}
+function qolganDarslar(login,sem){
+  return semLessons(sem).filter(l=>lessonState(login,l.id)!=="done");
 }
 function progressOf(login,sem){
   const ls=semLessons(sem); if(!ls.length) return 0;
@@ -5793,6 +5846,11 @@ function afterLogin(){
         else Object.assign(u,r.user);
         u.salt=u.salt||salty(); u.hash=hashPw(pw,u.salt);
         if(u.role!=="admin") u.pw=pw;
+        if(r.access){                        /* darslarga ruxsat serverdan keladi */
+          S.access.g = r.access.g || {};
+          if(u.role==="admin") S.access.u = r.access.u || {};
+          else S.access.u[lg] = (r.access.u||{})[lg] || {};
+        }
         save(); kir(u,pw);
       }catch(e){
         if(e.aloqa){                      /* internet yo'q — lokal tekshiramiz */
@@ -5900,21 +5958,28 @@ function vSem(sem){
      return `<div class="week"><button data-w="${w}"><span class="wnum">${w}</span>
       <span class="ttl"><b>${esc(WEEK_TITLES[sem+"-"+w]||w+"-hafta")}</b><em>${ls.length} mashg'ulot</em></span>
       <span class="pct">${dn}/${ls.length}</span></button>
-      <div class="wbody hide" id="w${w}">${ls.map(l=>`<button class="lrow" data-l="${l.id}">
+      <div class="wbody hide" id="w${w}">${ls.map(l=>{ const och=darsOchiq(u.login,l.id);
+        return `<button class="lrow${och?"":" yopiq"}" ${och?`data-l="${l.id}"`:`data-yopiq="1"`}>
         <span class="dot ${lessonState(u.login,l.id)}"></span>
         <span class="tag ${TYPE_CL[l.type]}">${TYPE_NM[l.type]} ${l.no}</span>
-        <span class="nm">${esc(l.title)}</span></button>`).join("")}</div></div>`;
+        <span class="nm">${esc(l.title)}</span>
+        ${och?"":`<span class="tag">yopiq</span>`}</button>`; }).join("")}</div></div>`;
    }).join("")}</div>`);
 }
 function afterSem(){
   $$(".week > button").forEach(b=>b.onclick=()=>$("#w"+b.dataset.w).classList.toggle("hide"));
-  $$(".lrow").forEach(b=>b.onclick=()=>go("#/lesson/"+b.dataset.l));
+  $$(".lrow[data-l]").forEach(b=>b.onclick=()=>go("#/lesson/"+b.dataset.l));
+  $$(".lrow[data-yopiq]").forEach(b=>b.onclick=()=>toast("Bu dars hozircha yopiq. O'qituvchi ochgandan keyin ochiladi.",true));
   const f=$(".wbody"); if(f) f.classList.remove("hide");
 }
 
 function vLesson(id){
   const l=byId(id); if(!l) return page(`<div class="card"><div class="empty">Bunday dars topilmadi.</div></div>`);
-  const u=me(); const p=lp(u.login,id); p.opened++; userData(u.login).lastSeen=nowISO(); save();
+  const u=me();
+  if(!darsOchiq(u.login,id)) return page(`<div class="card"><h1>Dars yopiq</h1>
+    <p class="sub">${esc(l.title)}</p>
+    <div class="empty">Bu mashg'ulot hozircha yopiq. O'qituvchi uni ochgandan keyin ishlashingiz mumkin.</div></div>`);
+  const p=lp(u.login,id); p.opened++; userData(u.login).lastSeen=nowISO(); save();
   const idx=LESSONS.indexOf(l);
   const extra = l.type==="lecture" ? "" : `
    <h2>Natija va hisobot</h2>
@@ -5946,6 +6011,7 @@ function vLesson(id){
 }
 function afterLesson(id){
   const l=byId(id); if(!l) return;
+  if(!darsOchiq(me().login,id)) return;      /* yopiq dars — sahifada tugmalar yo'q */
   mountSims(document);
   const u=me(), p=lp(u.login,id), idx=LESSONS.indexOf(l);
   $("#totest").onclick=()=>go("#/test/"+id);
@@ -5975,6 +6041,7 @@ function afterLesson(id){
 
 function vTest(id){
   const l=byId(id); if(!l) return page(`<div class="card"><div class="empty">Test topilmadi.</div></div>`);
+  if(!darsOchiq(me().login,id)) return page(`<div class="card"><div class="empty">Bu dars hozircha yopiq.</div></div>`);
   return page(`<h1>Test — ${esc(l.title)}</h1><p class="sub">${l.tests.length} ta savol · har bir savol uchun 1 ball</p>
    <form id="qs" onsubmit="return false">${l.tests.map((t,i)=>`<div class="q" id="q${i}"><h4>${i+1}. ${esc(t.q)}</h4>
     ${t.o.map((o,j)=>`<label class="opt" data-q="${i}" data-o="${j}"><input type="radio" name="q${i}" value="${j}"><span>${esc(o)}</span></label>`).join("")}
@@ -6048,17 +6115,23 @@ function vExam(){
   const u=me(), d=userData(u.login);
   const cards=[1,2].map(s=>{
     const has=d.exam[s], n=EXAMS[s]?EXAMS[s].length:0;
+    const och=imtihonOchiq(u.login,s), qolgan=qolganDarslar(u.login,s);
+    let tugma;
+    if(has) tugma=`<p class="sub"><b style="color:var(--ink)">${has.variant}-variant</b> topshirilgan · ${dstr(has.date)} · ${has.score!=null?has.score+" ball":"o'qituvchi bahosini kutmoqda"}</p>
+       <button class="btn ghost" data-view="${s}">Javoblarimni ko'rish</button>`;
+    else if(och) tugma=`<button class="btn" data-start="${s}">Variant olish va boshlash</button>`;
+    else tugma=`<div class="msg err" style="margin:0">Imtihon hali ochilmagan. Uni topshirish uchun semestrning barcha mashg'ulotlari bo'yicha testni kamida 60 % ga topshirish kerak.<br>Qolgan mashg'ulotlar: <b>${qolgan.length}</b> ta.</div>
+       ${qolgan.length?`<details style="margin-top:10px"><summary class="sub" style="cursor:pointer">Ro'yxatni ko'rish</summary>
+         <ul class="sub">${qolgan.slice(0,20).map(l=>`<li>${TYPE_NM[l.type]} ${l.no} — ${esc(l.title)}</li>`).join("")}${qolgan.length>20?`<li>… yana ${qolgan.length-20} ta</li>`:""}</ul></details>`:""}`;
     return `<div class="card"><h3 style="margin-top:0">${s}-semestr yakuniy imtihoni</h3>
-     <p class="sub">${n} ta variant · har bir variantda 3 ta savol · variant tasodifiy beriladi</p>
-     ${has?`<p class="sub"><b style="color:var(--ink)">${has.variant}-variant</b> topshirilgan · ${dstr(has.date)} · ${has.score!=null?has.score+" ball":"o'qituvchi bahosini kutmoqda"}</p>
-       <button class="btn ghost" data-view="${s}">Javoblarimni ko'rish</button>`
-      :`<button class="btn" data-start="${s}">Variant olish va boshlash</button>`}</div>`;
+     <p class="sub">${n} ta variant · har bir variantda 3 ta savol · variant tasodifiy beriladi</p>${tugma}</div>`;
   }).join("");
   return page(`<h1>Semestr yakuniy imtihoni</h1><p class="sub">Variant bir marta beriladi va saqlanadi; javoblar o'qituvchi panelida ko'rinadi.</p>${cards}`);
 }
 function afterExam(){
   $$("[data-start]").forEach(b=>b.onclick=()=>{
     const s=+b.dataset.start, d=userData(me().login);
+    if(!imtihonOchiq(me().login,s)){ toast("Imtihon hali ochilmagan",true); return; }
     const v=rnd(EXAMS[s].length)+1;
     d.exam[s]={variant:v,answers:["","",""],date:nowISO(),score:null}; save();
     cloudPush("imtihon",{sem:s,variant:v,javoblar:["","",""]}); go("#/exampaper/"+s);
@@ -6217,13 +6290,14 @@ function barChart(data,unit){
    ===================================================================== */
 let ADMIN_TAB="stat";
 let ADMIN_MSG="";
+let ADMIN_IMGS=[];
 function vAdmin(){
   const st=students();
   const active=st.filter(u=>{ const d=S.data[u.login]; return d&&d.lastSeen&&(Date.now()-new Date(d.lastSeen))<7*864e5; }).length;
   const avg=st.length?Math.round(st.reduce((a,u)=>a+avgScore(u.login),0)/st.length):0;
   const p1=st.length?Math.round(st.reduce((a,u)=>a+progressOf(u.login,1),0)/st.length):0;
   const p2=st.length?Math.round(st.reduce((a,u)=>a+progressOf(u.login,2),0)/st.length):0;
-  const tabs=[["stat","Statistika"],["stu","Talabalar"],["res","Natijalar"],["ex","Imtihonlar"],["exp","Eksport"]];
+  const tabs=[["stat","Statistika"],["stu","Talabalar"],["res","Natijalar"],["rux","Darslarga ruxsat"],["img","Rasmlar"],["ex","Imtihonlar"],["exp","Eksport"]];
   let body="";
   if(ADMIN_TAB==="stat"){
     const byType=["lecture","practice","lab"].map(t=>({l:TYPE_NM[t],v:st.length?Math.round(st.reduce((a,u)=>a+typeAvg(u.login,t),0)/st.length):0}));
@@ -6263,6 +6337,42 @@ function vAdmin(){
         return `<td style="text-align:center">${p&&p.test?`<b style="color:${p.test.score>=6?"var(--ok)":"var(--bad)"}">${p.test.score}</b>`:"—"}</td>`; }).join("")}
       <td><b>${avgScore(u.login)}%</b></td></tr>`).join("")||`<tr><td><div class="empty">Ma'lumot yo'q</div></td></tr>`}</tbody></table></div></div>`;
   }
+  if(ADMIN_TAB==="rux"){
+    const yopiq=LESSONS.filter(l=>S.access.g[l.id]===0).length;
+    body=`<div class="card"><h3 style="margin-top:0">Darslarni ochish va yopish</h3>
+      <p class="sub">Belgi qo'yilgan dars barcha talabalarga ochiq. Belgini olib tashlasangiz, dars yopiladi va talabalar uni ocholmaydi.
+      Hozir yopiq: <b>${yopiq}</b> ta mashg'ulot.</p>
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn ghost sm" data-all="1">Hammasini ochish</button>
+        <button class="btn ghost sm" data-all="0">Hammasini yopish</button></div>
+      ${[1,2].map(sem=>`<h3>${sem}-semestr</h3>${weeksOf(sem).map(w=>{
+        const ls=weekLessons(sem,w);
+        const hammasiOchiq=ls.every(l=>S.access.g[l.id]!==0);
+        return `<div class="card" style="padding:0;margin-bottom:10px">
+          <div class="ruxsat" style="background:var(--surface2)">
+            <b class="nm">${w}-hafta — ${esc(WEEK_TITLES[sem+"-"+w]||"")}</b>
+            <button class="btn sm ghost" data-week="${sem}|${w}|${hammasiOchiq?0:1}">${hammasiOchiq?"Haftani yopish":"Haftani ochish"}</button></div>
+          ${ls.map(l=>`<label class="ruxsat">
+            <input type="checkbox" data-lesson="${l.id}" ${S.access.g[l.id]===0?"":"checked"}>
+            <span class="tag ${TYPE_CL[l.type]}">${TYPE_NM[l.type]} ${l.no}</span>
+            <span class="nm">${esc(l.title)}</span></label>`).join("")}
+        </div>`; }).join("")}`).join("")}</div>`;
+  }
+
+  if(ADMIN_TAB==="img"){
+    const rasmlar=[];
+    st.forEach(u=>{ const d=userData(u.login);
+      LESSONS.forEach(l=>{ const pr=d.progress[l.id];
+        if(pr&&pr.images) pr.images.forEach(src=>rasmlar.push({u,l,src})); }); });
+    body=`<div class="card"><h3 style="margin-top:0">Talabalar yuklagan rasmlar</h3>
+      <p class="sub">Jami ${rasmlar.length} ta rasm. Kattalashtirish uchun rasmni bosing.</p>
+      ${rasmlar.length?`<div class="gal">${rasmlar.map((r,i)=>`<figure>
+        <img src="${r.src}" data-img="${i}" loading="lazy" alt="">
+        <figcaption><b>${esc(r.u.familiya)} ${esc(r.u.ism)}</b><br>${esc(r.u.guruh)}<br>${TYPE_NM[r.l.type]} ${r.l.no} — ${esc(r.l.title.slice(0,48))}${r.l.title.length>48?"…":""}</figcaption>
+        </figure>`).join("")}</div>`:`<div class="empty">Hali rasm yuklanmagan.</div>`}</div>`;
+    ADMIN_IMGS=rasmlar;
+  }
+
   if(ADMIN_TAB==="ex"){
     let rows="";
     st.forEach(u=>{ const d=userData(u.login);
@@ -6335,7 +6445,20 @@ function afterAdmin(){
     setTimeout(()=>{ const b=$("#pull"); if(b) b.click(); }, 60);
   };
   if($("#repw")) $("#repw").onkeydown=e=>{ if(e.key==="Enter") $("#reok").click(); };
-  $$("[data-tab]").forEach(b=>b.onclick=()=>{ ADMIN_TAB=b.dataset.tab; render(); });
+  $$("[data-tab]").forEach(b=>b.onclick=()=>{ ADMIN_TAB=b.dataset.tab; ADMIN_MSG=""; render(); });
+
+  /* darslarga ruxsat */
+  $$("[data-lesson]").forEach(c=>c.onchange=()=>{ ruxsatBer(c.dataset.lesson, c.checked); toast(c.checked?"Dars ochildi":"Dars yopildi"); });
+  $$("[data-week]").forEach(b=>b.onclick=()=>{ const [sem,w,h]=b.dataset.week.split("|");
+    ruxsatBerKop(weekLessons(+sem,+w).map(l=>l.id), h==="1"); render(); });
+  $$("[data-all]").forEach(b=>b.onclick=()=>{ ruxsatBerKop(LESSONS.map(l=>l.id), b.dataset.all==="1"); render(); });
+
+  /* rasmni kattalashtirish */
+  $$("[data-img]").forEach(im=>im.onclick=()=>{ const r=ADMIN_IMGS[+im.dataset.img]; if(!r) return;
+    modal(`<h3 style="margin:0 0 4px">${esc(r.u.familiya)} ${esc(r.u.ism)}</h3>
+      <p class="sub">${esc(r.u.guruh)} · ${TYPE_NM[r.l.type]} ${r.l.no} — ${esc(r.l.title)}</p>
+      <img src="${r.src}" style="width:100%">
+      <p class="sub" style="margin-top:8px"><a href="${r.src}" target="_blank">Rasmni alohida oynada ochish</a></p>`); });
   $$("[data-u]").forEach(b=>b.onclick=()=>showStudent(b.dataset.u));
   $$("[data-ex]").forEach(b=>b.onclick=()=>{ const [lg,s]=b.dataset.ex.split("|"); showExam(lg,s); });
   if($("#e1")) $("#e1").onclick=()=>{ const r=[["Familiya","Ism","Sharif","Guruh","Login","Parol","1-sem %","2-sem %","O'rtacha %","Ro'yxatdan o'tgan","So'nggi faollik"]];
@@ -6380,11 +6503,39 @@ function showStudent(lg){
    <div class="scroll"><table><thead><tr><th>Mashg'ulot</th><th>Mavzu</th><th>Test</th><th>Hisobot</th><th>Rasm</th></tr></thead><tbody>${rows}</tbody></table></div>
    ${works?`<h4>Hisobotlar</h4>${works}`:""}
    ${imgs.length?`<h4>Yuklangan rasmlar</h4><div style="display:flex;gap:8px;flex-wrap:wrap">${imgs.map(([l,s])=>`<img class="thumb" src="${s}" title="${esc(l.title)}">`).join("")}</div>`:""}
+   <h4>Shu talaba uchun alohida ruxsat</h4>
+   <p class="sub">Dars umumiy ro'yxatda yopiq bo'lsa ham, shu talabaga alohida ochish mumkin — masalan mavzuni qayta o'zlashtirish uchun.</p>
+   <div class="row" style="align-items:flex-end">
+     <label class="fld" style="margin:0"><span>Mashg'ulot</span>
+       <select id="rsel">${LESSONS.map(l=>`<option value="${l.id}">${l.sem}-sem · ${l.week}-hafta · ${TYPE_NM[l.type]} ${l.no} — ${esc(l.title.slice(0,40))}</option>`).join("")}</select></label>
+     <button class="btn sm" id="rop" style="flex:0 0 auto">Ochish</button>
+     <button class="btn sm ghost" id="rcl" style="flex:0 0 auto">Yopish</button>
+     <button class="btn sm ghost" id="rdel" style="flex:0 0 auto">Alohida ruxsatni bekor qilish</button>
+   </div>
+   ${(()=>{ const o=S.access.u[lg]||{}; const k=Object.keys(o).filter(x=>!/^EXAM/.test(x));
+     return k.length?`<div class="readout">${k.map(id=>{ const l=byId(id); return (l?`${TYPE_NM[l.type]} ${l.no} — ${esc(l.title)}`:id)+" : "+(o[id]?"ochiq":"yopiq"); }).join("\n")}</div>`
+       :`<p class="sub">Alohida ruxsat berilmagan.</p>`; })()}
+   <h4>Imtihonga ruxsat</h4>
+   <p class="sub">Odatda imtihon semestrning barcha darslari o'zlashtirilgach o'ziga ochiladi. Bu yerdan qo'lda ham ochish mumkin.</p>
+   <div class="row">
+     ${[1,2].map(s=>{ const o=(S.access.u[lg]||{})["EXAM"+s];
+       return `<button class="btn sm ghost" data-ex-open="${s}">${s}-semestr imtihonini ${o?"yopish":"ochish"}</button>`; }).join("")}
+   </div>
    <h4>Hisob ma'lumotlari</h4>
    <div id="am"></div>
    <div class="row"><label class="fld"><span>Login</span><input id="ulg" value="${esc(u.login)}"></label>
     <label class="fld"><span>Parol</span><input id="upw" value="${esc(u.pw||"")}"></label></div>
    <button class="btn" id="usave">Login va parolni saqlash</button>`);
+
+  const yangila=()=>{ $("#modal").innerHTML=""; showStudent(lg); };
+  $("#rop").onclick=()=>{ ruxsatBer($("#rsel").value, true, lg); toast("Talabaga ochildi"); yangila(); };
+  $("#rcl").onclick=()=>{ ruxsatBer($("#rsel").value, false, lg); toast("Talabaga yopildi"); yangila(); };
+  $("#rdel").onclick=()=>{ const id=$("#rsel").value;
+    if(S.access.u[lg]) delete S.access.u[lg][id];
+    save(); cloudPush("ruxsat",{items:[{login:lg,darsId:id,holat:-1}]}); toast("Alohida ruxsat bekor qilindi"); yangila(); };
+  $$("[data-ex-open]").forEach(b=>b.onclick=()=>{ const s=b.dataset.exOpen;
+    const hozir=(S.access.u[lg]||{})["EXAM"+s];
+    ruxsatBer("EXAM"+s, !hozir, lg); toast(hozir?"Imtihon yopildi":"Imtihon ochildi"); yangila(); });
 
   $("#usave").onclick=()=>{
     const nlg=$("#ulg").value.trim().toLowerCase(), npw=$("#upw").value;

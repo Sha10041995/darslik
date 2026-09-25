@@ -421,6 +421,9 @@ function darsOchiq(login, id) {
   const umumiy = S.access.g[id];
   return umumiy === undefined ? true : !!umumiy;
 }
+/* testni qayta topshirishga ruxsat — bitta talaba, bitta dars uchun */
+function qaytaRuxsat(login, id) { return (S.access.u[login] || {})["RETRY:" + id] === 1; }
+
 function ruxsatBer(id, holat, login) {
   if (login) { (S.access.u[login] = S.access.u[login] || {})[id] = holat ? 1 : 0; }
   else S.access.g[id] = holat ? 1 : 0;
@@ -5581,7 +5584,7 @@ const QKEY = "mpt.queue.v1";
    orqali baza bilan bog'lanadi. Havolani admin panelidan ham
    o'zgartirish mumkin — u brauzer xotirasida saqlanadi.
    --------------------------------------------------------------- */
-const MPT_API_ASOSIY = "https://script.google.com/macros/s/AKfycbxwy6Mjrzc25HCMsOLsHHyWf9KaOo4XouSPB--dVYZl1nU91RqgxfFPmgoH7bjHT6sM/exec";
+const MPT_API_ASOSIY = "https://script.google.com/macros/s/AKfycbxSymoG69B-ueNyisY4klp7GF0llGNwZ0QTUhVBK8h0aO0QV5WuwINkCMN2S0gpYE0m/exec";
 let MPT_API = (function(){ try { return localStorage.getItem("mpt.api") || MPT_API_ASOSIY; }
                            catch(e){ return MPT_API_ASOSIY; } })();
 function setApi(u){
@@ -6001,8 +6004,10 @@ function vLesson(id){
    </div>
    <div class="card" style="margin-top:20px;background:var(--surface2)">
      <h3 style="margin-top:0">Bilimni tekshirish</h3>
-     <p class="sub" style="margin-bottom:12px">${p.test?`So'nggi natija: <b style="color:var(--ink)">${p.test.score}/${p.test.total}</b> · ${dstr(p.test.date)} · urinishlar: ${p.test.attempts}`:"10 ta savol. Har bir javobdan keyin izoh ko'rsatiladi."}</p>
-     <button class="btn" id="totest">${p.test?"Testni qayta topshirish":"Testni boshlash"}</button>
+     <p class="sub" style="margin-bottom:12px">${p.test?`Natija: <b style="color:var(--ink)">${p.test.score}/${p.test.total}</b> · ${dstr(p.test.date)} · urinishlar: ${p.test.attempts}`:`${l.tests.length} ta savol. Test bir marta topshiriladi, har bir javobdan keyin izoh ko'rsatiladi.`}</p>
+     ${(!p.test || qaytaRuxsat(u.login,id))
+       ? `<button class="btn" id="totest">${p.test?"Qayta topshirish (ruxsat berilgan)":"Testni boshlash"}</button>`
+       : `<div class="msg ok" style="margin:0">Test topshirilgan. Qayta topshirish uchun o'qituvchi ruxsati kerak.</div>`}
    </div>
    <div class="pager">
      <button class="btn ghost" id="prev" ${idx===0?"disabled":""}>← Oldingi</button>
@@ -6014,7 +6019,7 @@ function afterLesson(id){
   if(!darsOchiq(me().login,id)) return;      /* yopiq dars — sahifada tugmalar yo'q */
   mountSims(document);
   const u=me(), p=lp(u.login,id), idx=LESSONS.indexOf(l);
-  $("#totest").onclick=()=>go("#/test/"+id);
+  if($("#totest")) $("#totest").onclick=()=>go("#/test/"+id);
   if($("#prev")) $("#prev").onclick=()=>go("#/lesson/"+LESSONS[idx-1].id);
   if($("#next")) $("#next").onclick=()=>go("#/lesson/"+LESSONS[idx+1].id);
   const gal=$("#imgs");
@@ -6039,18 +6044,32 @@ function afterLesson(id){
     cloudPush("hisobot",{darsId:id,mavzu:l.title,matn:p.tasks}); toast("Hisobot saqlandi"); };
 }
 
+/* variantlarni har safar aralashtirish — joylashuvini yodlab olishning oldini oladi */
+function aralash(n){ const a=[...Array(n).keys()];
+  for(let i=a.length-1;i>0;i--){ const j=rnd(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
 function vTest(id){
   const l=byId(id); if(!l) return page(`<div class="card"><div class="empty">Test topilmadi.</div></div>`);
-  if(!darsOchiq(me().login,id)) return page(`<div class="card"><div class="empty">Bu dars hozircha yopiq.</div></div>`);
-  return page(`<h1>Test — ${esc(l.title)}</h1><p class="sub">${l.tests.length} ta savol · har bir savol uchun 1 ball</p>
-   <form id="qs" onsubmit="return false">${l.tests.map((t,i)=>`<div class="q" id="q${i}"><h4>${i+1}. ${esc(t.q)}</h4>
-    ${t.o.map((o,j)=>`<label class="opt" data-q="${i}" data-o="${j}"><input type="radio" name="q${i}" value="${j}"><span>${esc(o)}</span></label>`).join("")}
-    <div class="exp hide" id="e${i}">${esc(t.e)}</div></div>`).join("")}</form>
+  const u=me();
+  if(!darsOchiq(u.login,id)) return page(`<div class="card"><div class="empty">Bu dars hozircha yopiq.</div></div>`);
+  const pr=lp(u.login,id);
+  if(pr.test && !qaytaRuxsat(u.login,id)) return page(`<div class="card"><h1>Test topshirilgan</h1>
+    <p class="sub">${esc(l.title)}</p>
+    <div class="msg ok">Natijangiz: <b>${pr.test.score} / ${pr.test.total}</b> · ${dstr(pr.test.date)}</div>
+    <p class="sub">Test bir marta topshiriladi. Qayta topshirish uchun o'qituvchidan ruxsat olishingiz kerak —
+       u ruxsat bergandan keyin bu sahifa o'zi ochiladi.</p>
+    <button class="btn ghost" id="bk">Darsga qaytish</button></div>`);
+  return page(`<h1>Test — ${esc(l.title)}</h1><p class="sub">${l.tests.length} ta savol · har bir savol uchun 1 ball · test bir marta topshiriladi</p>
+   <form id="qs" onsubmit="return false">${l.tests.map((t,i)=>{ const tartib=aralash(t.o.length);
+    return `<div class="q" id="q${i}"><h4>${i+1}. ${esc(t.q)}</h4>
+    ${tartib.map(j=>`<label class="opt" data-q="${i}" data-o="${j}"><input type="radio" name="q${i}" value="${j}"><span>${esc(t.o[j])}</span></label>`).join("")}
+    <div class="exp hide" id="e${i}">${esc(t.e)}</div></div>`; }).join("")}</form>
    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="fin">Testni yakunlash</button>
    <button class="btn ghost" id="back">Darsga qaytish</button></div><div id="res"></div>`);
 }
 function afterTest(id){
   const l=byId(id), u=me();
+  if($("#bk")){ $("#bk").onclick=()=>go("#/lesson/"+id); return; }   /* test yopiq sahifasi */
   $("#back").onclick=()=>go("#/lesson/"+id);
   $("#fin").onclick=()=>{
     let sc=0, unanswered=0;
@@ -6070,6 +6089,7 @@ function afterTest(id){
     const p=lp(u.login,id);
     const prev=p.test?p.test.attempts:0;
     p.test={score:sc,total:l.tests.length,date:nowISO(),attempts:prev+1};
+    if(qaytaRuxsat(u.login,id)) ruxsatBer("RETRY:"+id, false, u.login);   /* ruxsat bir martalik */
     save();
     cloudPush("natija",{darsId:id,mavzu:l.title,tur:TYPE_NM[l.type],ball:sc,maks:l.tests.length,urinish:prev+1});
     const pc=Math.round(sc/l.tests.length*100);
@@ -6291,8 +6311,12 @@ function barChart(data,unit){
 let ADMIN_TAB="stat";
 let ADMIN_MSG="";
 let ADMIN_IMGS=[];
+let ADMIN_GROUP="";
+const guruhlar = () => [...new Set(students().map(u=>String(u.guruh||"—")))].sort();
+const stF = () => ADMIN_GROUP ? students().filter(u=>String(u.guruh||"—")===ADMIN_GROUP) : students();
+
 function vAdmin(){
-  const st=students();
+  const st=stF();
   const active=st.filter(u=>{ const d=S.data[u.login]; return d&&d.lastSeen&&(Date.now()-new Date(d.lastSeen))<7*864e5; }).length;
   const avg=st.length?Math.round(st.reduce((a,u)=>a+avgScore(u.login),0)/st.length):0;
   const p1=st.length?Math.round(st.reduce((a,u)=>a+progressOf(u.login,1),0)/st.length):0;
@@ -6314,7 +6338,15 @@ function vAdmin(){
       <div class="stat"><b>${p2}%</b><span>2-semestr progressi</span></div>
       <div class="stat"><b>${Object.values(S.data).reduce((a,d)=>a+Object.values(d.progress||{}).reduce((x,p)=>x+(p.images?p.images.length:0),0),0)}</b><span>Yuklangan rasmlar</span></div>
      </div>
-     <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Mashg'ulot turlari bo'yicha o'rtacha ball</h3>${barChart(byType,"%")}</div>
+     <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Guruhlar kesimida holat</h3>
+      <div class="scroll"><table><thead><tr><th>Guruh</th><th>Talabalar</th><th>1-sem</th><th>2-sem</th><th>O'rtacha ball</th><th>Faol (7 kun)</th></tr></thead><tbody>
+      ${guruhlar().map(g=>{ const t=students().filter(u=>String(u.guruh||"—")===g);
+        const f=t.filter(u=>{ const d=S.data[u.login]; return d&&d.lastSeen&&(Date.now()-new Date(d.lastSeen))<7*864e5; }).length;
+        const or=(fn)=>t.length?Math.round(t.reduce((a,u)=>a+fn(u),0)/t.length):0;
+        return `<tr><td><b>${esc(g)}</b></td><td>${t.length}</td><td>${or(u=>progressOf(u.login,1))}%</td>
+          <td>${or(u=>progressOf(u.login,2))}%</td><td>${or(u=>avgScore(u.login))}%</td><td>${f}</td></tr>`;
+      }).join("")||`<tr><td colspan="6"><div class="empty">Guruh yo'q</div></td></tr>`}</tbody></table></div></div>
+     <div class="card"><h3 style="margin-top:0">Mashg'ulot turlari bo'yicha o'rtacha ball</h3>${barChart(byType,"%")}</div>
      <div class="card"><h3 style="margin-top:0">Guruhlar kesimida o'rtacha natija</h3>${barChart(grp,"%")}</div>
      <div class="card"><h3 style="margin-top:0">1-semestr haftalari bo'yicha test natijalari</h3>${barChart(wk,"%")}</div>`;
   }
@@ -6399,7 +6431,12 @@ function vAdmin(){
   }
   return page(`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
      <div><h1>Admin panel</h1><p class="sub">O'qituvchi uchun boshqaruv va monitoring</p></div>
-     <div style="text-align:right"><button class="btn ghost" id="pull">Serverdan yangilash</button>
+     <div style="text-align:right">
+       <select id="gfil" style="width:auto;margin-bottom:8px">
+         <option value="">Barcha guruhlar (${students().length} talaba)</option>
+         ${guruhlar().map(g=>`<option value="${esc(g)}" ${ADMIN_GROUP===g?"selected":""}>${esc(g)} — ${students().filter(u=>String(u.guruh||"—")===g).length} talaba</option>`).join("")}
+       </select><br>
+       <button class="btn ghost" id="pull">Serverdan yangilash</button>
        <div class="sub" style="margin:6px 0 0;font-size:12.5px">rejim: ${Cloud.on?"server":"lokal"}</div></div></div>
    <div id="pm">${ADMIN_MSG}</div>
    <div class="tabs">${tabs.map(([k,n])=>`<button data-tab="${k}" class="${ADMIN_TAB===k?"on":""}">${n}</button>`).join("")}</div>${body}`);
@@ -6446,6 +6483,7 @@ function afterAdmin(){
   };
   if($("#repw")) $("#repw").onkeydown=e=>{ if(e.key==="Enter") $("#reok").click(); };
   $$("[data-tab]").forEach(b=>b.onclick=()=>{ ADMIN_TAB=b.dataset.tab; ADMIN_MSG=""; render(); });
+  if($("#gfil")) $("#gfil").onchange=()=>{ ADMIN_GROUP=$("#gfil").value; render(); };
 
   /* darslarga ruxsat */
   $$("[data-lesson]").forEach(c=>c.onchange=()=>{ ruxsatBer(c.dataset.lesson, c.checked); toast(c.checked?"Dars ochildi":"Dars yopildi"); });
@@ -6511,7 +6549,10 @@ function showStudent(lg){
      <button class="btn sm" id="rop" style="flex:0 0 auto">Ochish</button>
      <button class="btn sm ghost" id="rcl" style="flex:0 0 auto">Yopish</button>
      <button class="btn sm ghost" id="rdel" style="flex:0 0 auto">Alohida ruxsatni bekor qilish</button>
+     <button class="btn sm" id="rretry" style="flex:0 0 auto">Testni qayta topshirishga ruxsat</button>
    </div>
+   ${(()=>{ const o=S.access.u[lg]||{}; const k=Object.keys(o).filter(x=>/^RETRY:/.test(x)&&o[x]===1);
+     return k.length?`<p class="sub">Qayta topshirishga ruxsat berilgan: ${k.map(x=>{ const l=byId(x.slice(6)); return l?`${TYPE_NM[l.type]} ${l.no}`:x; }).join(", ")}</p>`:""; })()}
    ${(()=>{ const o=S.access.u[lg]||{}; const k=Object.keys(o).filter(x=>!/^EXAM/.test(x));
      return k.length?`<div class="readout">${k.map(id=>{ const l=byId(id); return (l?`${TYPE_NM[l.type]} ${l.no} — ${esc(l.title)}`:id)+" : "+(o[id]?"ochiq":"yopiq"); }).join("\n")}</div>`
        :`<p class="sub">Alohida ruxsat berilmagan.</p>`; })()}
@@ -6533,6 +6574,9 @@ function showStudent(lg){
   $("#rdel").onclick=()=>{ const id=$("#rsel").value;
     if(S.access.u[lg]) delete S.access.u[lg][id];
     save(); cloudPush("ruxsat",{items:[{login:lg,darsId:id,holat:-1}]}); toast("Alohida ruxsat bekor qilindi"); yangila(); };
+  $("#rretry").onclick=()=>{ const id=$("#rsel").value; const l=byId(id);
+    ruxsatBer("RETRY:"+id, true, lg);
+    toast((l?TYPE_NM[l.type]+" "+l.no:id)+" testini qayta topshirishga ruxsat berildi"); yangila(); };
   $$("[data-ex-open]").forEach(b=>b.onclick=()=>{ const s=b.dataset.exOpen;
     const hozir=(S.access.u[lg]||{})["EXAM"+s];
     ruxsatBer("EXAM"+s, !hozir, lg); toast(hozir?"Imtihon yopildi":"Imtihon ochildi"); yangila(); });

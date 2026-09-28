@@ -428,7 +428,9 @@ function ruxsatBer(id, holat, login) {
   if (login) { (S.access.u[login] = S.access.u[login] || {})[id] = holat ? 1 : 0; }
   else S.access.g[id] = holat ? 1 : 0;
   save();
-  if (typeof cloudPush === "function") cloudPush("ruxsat", { items: [{ login: login || "*", darsId: id, holat: holat ? 1 : 0 }] });
+  if (typeof cloudPush === "function")
+    cloudPush("ruxsat", { items: [{ login: login || "*", darsId: id, holat: holat ? 1 : 0 }] },
+      null, e => toast("Serverga saqlanmadi: " + e.message, true));
 }
 function ruxsatBerKop(idlar, holat, login) {
   const items = idlar.map(id => {
@@ -437,7 +439,8 @@ function ruxsatBerKop(idlar, holat, login) {
     return { login: login || "*", darsId: id, holat: holat ? 1 : 0 };
   });
   save();
-  if (typeof cloudPush === "function") cloudPush("ruxsat", { items });
+  if (typeof cloudPush === "function")
+    cloudPush("ruxsat", { items }, null, e => toast("Serverga saqlanmadi: " + e.message, true));
 }
 
 function userData(login) {
@@ -5643,16 +5646,22 @@ async function qFlush(){
   const qoldi = [];
   for(const op of q){
     try { await Cloud.raw(op.action, op.payload); }
-    catch(e){ qoldi.push(op); }
+    catch(e){ if(e.aloqa) qoldi.push(op); }   /* server rad etgan yozuv navbatda qolmaydi */
   }
   qSet(qoldi); cloudBadge();
 }
 
-/* ---------- fon rejimida yuborish ---------- */
-function cloudPush(action, payload){
+/* ---------- fon rejimida yuborish ----------
+   ok(r)   — muvaffaqiyatli yuborilganda
+   xato(e) — yuborilmaganda (server rad etdi yoki parol yo'q)
+   Faqat aloqa uzilganda navbatga qo'yiladi; server rad etsa qayta urinilmaydi. */
+function cloudPush(action, payload, ok, xato){
   const p = Object.assign({}, payload, cred());
   if(!Cloud.on || !p.login) return;
-  Cloud.raw(action, p).then(cloudBadge).catch(() => qAdd(action, p));
+  if(!p.pw){ if(xato) xato(new Error("Parolingiz xotiradan o'chgan — qayta kiriting")); return; }
+  Cloud.raw(action, p)
+    .then(r => { cloudBadge(); if(ok) ok(r); })
+    .catch(e => { if(e.aloqa) qAdd(action, p); cloudBadge(); if(xato) xato(e); });
 }
 
 /* ---------- holat ko'rsatkichi ---------- */
@@ -6371,7 +6380,13 @@ function vAdmin(){
   }
   if(ADMIN_TAB==="rux"){
     const yopiq=LESSONS.filter(l=>S.access.g[l.id]===0).length;
-    body=`<div class="card"><h3 style="margin-top:0">Darslarni ochish va yopish</h3>
+    const ogoh = (Cloud.on && !cred().pw)
+      ? `<div class="msg err">Parolingiz xotiradan o'chgan (sahifa yangilangan). Hozir kiritilgan o'zgarishlar
+          <b>faqat shu qurilmada</b> qoladi va talabalarga yetib bormaydi.
+          <div class="row" style="margin-top:8px"><input id="repw" type="password" placeholder="Parol">
+          <button class="btn sm" id="reok" style="flex:0 0 auto">Tasdiqlash</button></div></div>`
+      : (Cloud.on ? "" : `<div class="msg err">Darslik server bilan bog'lanmagan — o'zgarishlar faqat shu qurilmada qoladi.</div>`);
+    body=`${ogoh}<div class="card"><h3 style="margin-top:0">Darslarni ochish va yopish</h3>
       <p class="sub">Belgi qo'yilgan dars barcha talabalarga ochiq. Belgini olib tashlasangiz, dars yopiladi va talabalar uni ocholmaydi.
       Hozir yopiq: <b>${yopiq}</b> ta mashg'ulot.</p>
       <div class="row" style="margin-bottom:12px">
@@ -6478,15 +6493,18 @@ function afterAdmin(){
   if($("#reok")) $("#reok").onclick=()=>{
     const v=$("#repw").value;
     if(!v) return;
-    setSessionPw(v); ADMIN_MSG=""; render();
-    setTimeout(()=>{ const b=$("#pull"); if(b) b.click(); }, 60);
+    setSessionPw(v); ADMIN_MSG="";
+    const tab=ADMIN_TAB; render();
+    if(tab!=="rux") setTimeout(()=>{ const b=$("#pull"); if(b) b.click(); }, 60);
+    else toast("Parol qabul qilindi — endi o'zgarishlar serverga saqlanadi");
   };
   if($("#repw")) $("#repw").onkeydown=e=>{ if(e.key==="Enter") $("#reok").click(); };
   $$("[data-tab]").forEach(b=>b.onclick=()=>{ ADMIN_TAB=b.dataset.tab; ADMIN_MSG=""; render(); });
   if($("#gfil")) $("#gfil").onchange=()=>{ ADMIN_GROUP=$("#gfil").value; render(); };
 
   /* darslarga ruxsat */
-  $$("[data-lesson]").forEach(c=>c.onchange=()=>{ ruxsatBer(c.dataset.lesson, c.checked); toast(c.checked?"Dars ochildi":"Dars yopildi"); });
+  $$("[data-lesson]").forEach(c=>c.onchange=()=>{ ruxsatBer(c.dataset.lesson, c.checked);
+    toast((c.checked?"Dars ochildi":"Dars yopildi")+(Cloud.on&&cred().pw?" va serverga saqlandi":"")); });
   $$("[data-week]").forEach(b=>b.onclick=()=>{ const [sem,w,h]=b.dataset.week.split("|");
     ruxsatBerKop(weekLessons(+sem,+w).map(l=>l.id), h==="1"); render(); });
   $$("[data-all]").forEach(b=>b.onclick=()=>{ ruxsatBerKop(LESSONS.map(l=>l.id), b.dataset.all==="1"); render(); });
@@ -6658,7 +6676,24 @@ window.addEventListener("hashchange",render);
   applyTheme();
   render();
   cloudBadge();
-  if(Cloud.on){ qFlush(); setInterval(qFlush, 60000); }
+  if(Cloud.on){
+    qFlush();
+    setInterval(qFlush, 60000);
+
+    /* Talaba uchun ruxsatlarni serverdan davriy yangilab turamiz:
+       o'qituvchi darsni ochsa yoki yopsa, qayta kirmasdan ham ta'sir qiladi. */
+    const yangila=()=>{
+      const u=me(); if(!u || u.role==="admin") return;
+      const c=cred(); if(!c.pw) return;
+      const eski=JSON.stringify(S.access);
+      cloudPullMe(u.login, c.pw).then(()=>{
+        if(JSON.stringify(S.access)!==eski && /^#\/(sem|dash|exam|lesson|test)/.test(location.hash||"")) render();
+      }).catch(()=>{});
+    };
+    setTimeout(yangila, 2000);
+    setInterval(yangila, 120000);
+    window.addEventListener("focus", yangila);
+  }
 })();
 </script>
 </body>

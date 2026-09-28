@@ -5679,7 +5679,8 @@ async function cloudPullAll(){
   const admin = me();
   S.users = (r.users || []).concat(admin ? [admin] : []).filter((u,i,a) => a.findIndex(x=>x.login===u.login)===i);
   S.data = r.data || {};
-  if(r.access) S.access = { g: r.access.g || {}, u: r.access.u || {} };
+  if(r.access){ S.access = { g: r.access.g || {}, u: r.access.u || {} }; SERVER_ESKI = false; }
+  else SERVER_ESKI = true;          /* serverda ruxsat qo'llab-quvvatlanmaydi */
   save();
   return r;
 }
@@ -6321,6 +6322,7 @@ let ADMIN_TAB="stat";
 let ADMIN_MSG="";
 let ADMIN_IMGS=[];
 let ADMIN_GROUP="";
+let SERVER_ESKI=false;
 const guruhlar = () => [...new Set(students().map(u=>String(u.guruh||"—")))].sort();
 const stF = () => ADMIN_GROUP ? students().filter(u=>String(u.guruh||"—")===ADMIN_GROUP) : students();
 
@@ -6385,7 +6387,9 @@ function vAdmin(){
           <b>faqat shu qurilmada</b> qoladi va talabalarga yetib bormaydi.
           <div class="row" style="margin-top:8px"><input id="repw" type="password" placeholder="Parol">
           <button class="btn sm" id="reok" style="flex:0 0 auto">Tasdiqlash</button></div></div>`
-      : (Cloud.on ? "" : `<div class="msg err">Darslik server bilan bog'lanmagan — o'zgarishlar faqat shu qurilmada qoladi.</div>`);
+      : (Cloud.on ? (SERVER_ESKI ? `<div class="msg err"><b>Serverdagi Code.gs eski.</b> Bu yerdagi o'zgarishlar faqat shu qurilmada qoladi.
+            Apps Script da <code>Code.gs</code> ni yangilang va <b>Deploy → New version</b> qiling.</div>` : "")
+          : `<div class="msg err">Darslik server bilan bog'lanmagan — o'zgarishlar faqat shu qurilmada qoladi.</div>`);
     body=`${ogoh}<div class="card"><h3 style="margin-top:0">Darslarni ochish va yopish</h3>
       <p class="sub">Belgi qo'yilgan dars barcha talabalarga ochiq. Belgini olib tashlasangiz, dars yopiladi va talabalar uni ocholmaydi.
       Hozir yopiq: <b>${yopiq}</b> ta mashg'ulot.</p>
@@ -6461,6 +6465,9 @@ function afterAdmin(){
     $("#pull").disabled=true; $("#pull").textContent="Yuklanmoqda...";
     try{ const r=await cloudPullAll();
       ADMIN_MSG=`<div class="msg ok">Baza yangilandi: ${students().length} talaba, ${r.natija||0} natija, ${r.hisobot||0} hisobot, ${r.rasm||0} rasm. (${dstr(nowISO())})</div>`;
+      if(!r.access) ADMIN_MSG+=`<div class="msg err"><b>Serverdagi Code.gs eski.</b> Darslarni ochish va yopish faqat shu qurilmada ishlaydi,
+        talabalarga yetib bormaydi. Apps Script da <code>Code.gs</code> ni yangi nusxaga almashtiring va
+        <b>Deploy → Manage deployments → New version</b> qiling.</div>`;
       render();
     }catch(e){ $("#pull").disabled=false; $("#pull").textContent="Serverdan yangilash";
       const m=e.message||"Serverga ulanib bo'lmadi";

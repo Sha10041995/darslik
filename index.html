@@ -5587,7 +5587,7 @@ const QKEY = "mpt.queue.v1";
    orqali baza bilan bog'lanadi. Havolani admin panelidan ham
    o'zgartirish mumkin — u brauzer xotirasida saqlanadi.
    --------------------------------------------------------------- */
-const MPT_API_ASOSIY = "https://script.google.com/macros/s/AKfycbxscncHjSrFn1Rz0I8_o_Wg4RbojteqXRMpTiNfQ_0b4BEDeFQtIyFPc4qsEzzW9ZxS/exec";
+const MPT_API_ASOSIY = "https://script.google.com/macros/s/AKfycbwEgE14BnWx7Y8d_qdHqIY8t4MzZuPMBWCwZjONjBeI2QkeM1iXxwBHgusiIjSEbS0/exec";
 let MPT_API = (function(){ try { return localStorage.getItem("mpt.api") || MPT_API_ASOSIY; }
                            catch(e){ return MPT_API_ASOSIY; } })();
 function setApi(u){
@@ -5609,8 +5609,21 @@ const Cloud = {
       return fetch(MPT_API, { method:"POST", redirect:"follow",
           headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: sorov })
         .then(res => res.text(), () => { throw aloqaXato(); })
-        .then(txt => { let r; try{ r = JSON.parse(txt); }catch(e){ throw aloqaXato(); }
-                       if(!r.ok) throw serverXato(r.xato); return r; });
+        .then(txt => {
+          let r;
+          try { r = JSON.parse(txt); }
+          catch(e){
+            /* Apps Script JSON o'rniga HTML qaytardi — bu deyarli har doim
+               server kodi eski versiyada ekanini yoki havola noto'g'riligini bildiradi */
+            const t = String(txt || "");
+            if(/Malformed HTML/i.test(t))
+              throw serverXato("Serverdagi HTML fayllar eski — Apps Script dagi index, css va js fayllarini yangilang, so'ng New version chiqaring");
+            if(/^\s*</.test(t))
+              throw serverXato("Server JSON o'rniga sahifa qaytardi — deployment eski versiyada yoki havola noto'g'ri");
+            throw aloqaXato();
+          }
+          if(!r.ok) throw serverXato(r.xato); return r;
+        });
     }
     return new Promise((ok, err) => {
       if(!Cloud.gs) return err(aloqaXato());
@@ -6443,6 +6456,12 @@ function vAdmin(){
       <button class="btn ghost" id="e2">Barcha test natijalari</button>
       <button class="btn ghost" id="e3">Imtihon javoblari</button>
       <button class="btn ghost" id="e4">Amaliy va laboratoriya hisobotlari</button></div></div>
+     <div class="card"><h3 style="margin-top:0">Server havolasi</h3>
+      <p class="sub">Darslik qaysi Apps Script deploymentiga murojaat qilishi. Yangi deployment chiqarsangiz,
+      havolani shu yerda almashtirasiz — fayl tahrirlash shart emas. Havola shu brauzerda saqlanadi.</p>
+      <div class="row"><input id="apiu2" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(MPT_API)}">
+      <button class="btn" id="apiok2" style="flex:0 0 auto">Saqlash va tekshirish</button></div>
+      <div id="apim"></div></div>
      <div class="card"><h3 style="margin-top:0">Zaxira nusxa</h3>
       <p class="sub">Butun bazani JSON faylga saqlash va boshqa qurilmada tiklash.</p>
       <div class="row"><button class="btn ghost" id="bk">JSON ga saqlash</button>
@@ -6456,7 +6475,8 @@ function vAdmin(){
          ${guruhlar().map(g=>`<option value="${esc(g)}" ${ADMIN_GROUP===g?"selected":""}>${esc(g)} — ${students().filter(u=>String(u.guruh||"—")===g).length} talaba</option>`).join("")}
        </select><br>
        <button class="btn ghost" id="pull">Serverdan yangilash</button>
-       <div class="sub" style="margin:6px 0 0;font-size:12.5px">rejim: ${Cloud.on?"server":"lokal"}</div></div></div>
+       <div class="sub" style="margin:6px 0 0;font-size:12.5px">rejim: ${Cloud.on?"server":"lokal"}${
+         (Cloud.on && !Cloud.gs && MPT_API) ? ` · havola: …${esc(MPT_API.replace(/\/exec$/,"").slice(-14))}` : ""}</div></div></div>
    <div id="pm">${ADMIN_MSG}</div>
    <div class="tabs">${tabs.map(([k,n])=>`<button data-tab="${k}" class="${ADMIN_TAB===k?"on":""}">${n}</button>`).join("")}</div>${body}`);
 }
@@ -6465,9 +6485,11 @@ function afterAdmin(){
     $("#pull").disabled=true; $("#pull").textContent="Yuklanmoqda...";
     try{ const r=await cloudPullAll();
       ADMIN_MSG=`<div class="msg ok">Baza yangilandi: ${students().length} talaba, ${r.natija||0} natija, ${r.hisobot||0} hisobot, ${r.rasm||0} rasm. (${dstr(nowISO())})</div>`;
-      if(!r.access) ADMIN_MSG+=`<div class="msg err"><b>Serverdagi Code.gs eski.</b> Darslarni ochish va yopish faqat shu qurilmada ishlaydi,
-        talabalarga yetib bormaydi. Apps Script da <code>Code.gs</code> ni yangi nusxaga almashtiring va
-        <b>Deploy → Manage deployments → New version</b> qiling.</div>`;
+      if(!r.access) ADMIN_MSG+=`<div class="msg err"><b>Server eski kod bilan ishlayapti.</b> Darslarni ochish va yopish faqat shu qurilmada qoladi.
+        <br>Tekshiring: Apps Script da <b>Deploy → Manage deployments</b> ni oching va
+        ${(Cloud.on && !Cloud.gs && MPT_API) ? `havolasi <code>…${esc(MPT_API.replace(/\/exec$/,"").slice(-14))}</code> bilan tugaydigan` : "ishlatilayotgan"}
+        deploymentni toping, qalam belgisini bosib <b>Version: New version</b> ni tanlang va <b>Deploy</b> qiling.
+        <br>Muharrirdagi kod o'z-o'zidan ishga tushmaydi — faqat chiqarilgan versiya ishlaydi.</div>`;
       render();
     }catch(e){ $("#pull").disabled=false; $("#pull").textContent="Serverdan yangilash";
       const m=e.message||"Serverga ulanib bo'lmadi";
@@ -6490,6 +6512,16 @@ function afterAdmin(){
     tortish();
   };
 
+  if($("#apiok2")) $("#apiok2").onclick=async ()=>{
+    const v=$("#apiu2").value.trim();
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(v)){
+      $("#apim").innerHTML=`<div class="msg err">Havola /exec bilan tugashi kerak.</div>`; return; }
+    setApi(v);
+    $("#apim").innerHTML=`<div class="msg ok">Saqlandi. Tekshirilmoqda...</div>`;
+    try{ await cloudPullAll();
+      $("#apim").innerHTML=`<div class="msg ok">Havola ishlayapti — baza tortildi.</div>`; }
+    catch(e){ $("#apim").innerHTML=`<div class="msg err">${esc(e.message||"Ulanib bo'lmadi")}</div>`; }
+  };
   if($("#apiok")) $("#apiok").onclick=()=>{
     const v=$("#apiu").value.trim();
     if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(v)){

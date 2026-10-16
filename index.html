@@ -1469,7 +1469,8 @@ const LESSONS = [
   ["f","T_sikl = 4 / f_osc","PIC da mashina sikli. f = 8 MHz → 500 ns; f = 20 MHz → 200 ns."],
   ["f","t = N · T_sikl","N ta bir sikli buyruq bajarilish vaqti — dasturiy kechikishlarni hisoblash asosi."],
   ["p","Misol. PIC16F877A, f = 4 MHz. Mashina sikli 1 µs. 1 ms kechikish uchun taxminan 1000 ta bir sikli buyruq kerak; bu odatda ichma-ich joylashgan ikki sikl bilan amalga oshiriladi."],
-  ["c","/* XC8: konfiguratsiya va kechikish */\n#pragma config FOSC = HS      // yuqori chastotali kvarts generatori\n#pragma config WDTE = OFF     // watchdog o'chirilgan\n#define _XTAL_FREQ 8000000UL  // kompilyator kechikishni shu chastotaga hisoblaydi\n\nvoid main(void)\n{\n    TRISB = 0x00;             // PORTB chiqish\n    while(1)\n    {\n        PORTB = 0xFF;\n        __delay_ms(500);      // 500 ms\n        PORTB = 0x00;\n        __delay_ms(500);\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","/* mikroC PRO for PIC: konfiguratsiya va kechikish */\n%s\n\nvoid main()\n{\n    TRISB = 0x00;             // PORTB chiqish\n    while (1)\n    {\n        PORTB = 0xFF;\n        Delay_ms(500);        // 500 ms\n        PORTB = 0x00;\n        Delay_ms(500);\n    }\n}"],
   ["p","Konfiguratsiya so'zidagi FOSC bitlari generator rejimini tanlaydi: LP — past chastotali kvarts (32 kHz), XT — o'rtacha (1–4 MHz), HS — yuqori chastotali (4–20 MHz), RC — tashqi RC zanjir, INTOSC — ichki generator. Noto'g'ri rejim tanlansa, mikrokontroller umuman ishga tushmaydi — bu boshlovchilar duch keladigan eng ko'p tarqalgan xato."],
   ["h","Interaktiv qism"],
   ["p","Taymer simulyatorida chastota va bo'luvchini o'zgartirib, to'lib ketish davri qanday hisoblanishini kuzating."],
@@ -1592,14 +1593,15 @@ const LESSONS = [
   ["f","P = A · B,  0 ≤ A,B ≤ 255  →  0 ≤ P ≤ 65 025","Natija 16 razryadli o'zgaruvchida saqlanadi."],
   ["h","Birinchi usul: takrorlangan qo'shish"],
   ["p","Eng sodda usul — A sonini B marta qo'shish. Tushunish oson, ammo B katta bo'lganda sekin ishlaydi: eng yomon holatda 255 ta qo'shish bajariladi."],
-  ["c","uint16_t mul_add(uint8_t a, uint8_t b)\n{\n    uint16_t p = 0;\n    while (b--)          /* b marta takrorlanadi */\n        p += a;\n    return p;\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","unsigned int mul_add(unsigned short a, unsigned short b)\n{\n    unsigned int p = 0;\n    while (b--)              // b marta takrorlanadi\n        p += a;\n    return p;\n}"],
   ["h","Ikkinchi usul: siljitish va qo'shish"],
   ["p","Bu usul qo'lda ko'paytirish qoidasini takrorlaydi: ko'paytuvchining har bir biti tekshiriladi, bit 1 bo'lsa ko'paytiriluvchi natijaga qo'shiladi, so'ng ko'paytiriluvchi bir razryad chapga siljitiladi. 8 razryadli sonlar uchun har doim atigi 8 qadam bajariladi."],
-  ["c","uint16_t mul_shift(uint8_t a, uint8_t b)\n{\n    uint16_t p = 0;\n    uint16_t m = a;          /* siljitiladigan ko'paytiriluvchi */\n\n    for (uint8_t i = 0; i < 8; i++)\n    {\n        if (b & 0x01)        /* quyi bit 1 bo'lsa qo'shamiz */\n            p += m;\n        m <<= 1;             /* ko'paytiriluvchini 2 ga ko'paytirish */\n        b >>= 1;             /* keyingi bitga o'tish */\n    }\n    return p;\n}"],
+  ["c","unsigned int mul_shift(unsigned short a, unsigned short b)\n{\n    unsigned int p = 0;\n    unsigned int m = a;      // siljitiladigan ko'paytiriluvchi\n    unsigned short i;\n\n    for (i = 0; i < 8; i++)\n    {\n        if (b & 0x01)        // quyi bit 1 bo'lsa qo'shamiz\n            p += m;\n        m <<= 1;             // ko'paytiriluvchini 2 ga ko'paytirish\n        b >>= 1;             // keyingi bitga o'tish\n    }\n    return p;\n}"],
   ["t",["Qadam","b ning quyi biti","Amal","p"],[["1","1 (b=13=00001101)","p += 5","5"],["2","0","qo'shilmaydi","5"],["3","1","p += 20","25"],["4","1","p += 40","65"],["5–8","0","qo'shilmaydi","65"]]],
   ["p","Jadvalda A = 5, B = 13 uchun hisob keltirilgan: natija 65 ga teng, ya'ni 5 · 13 = 65."],
   ["h","To'liq dastur"],
-  ["c","#include <xc.h>\n#include <stdint.h>\n#define _XTAL_FREQ 8000000UL\n\nuint16_t mul_shift(uint8_t a, uint8_t b);\n\nvoid main(void)\n{\n    uint8_t  a = 25, b = 17;\n    uint16_t p;\n\n    TRISB = 0x00;            /* PORTB — natijaning quyi bayti */\n    TRISD = 0x00;            /* PORTD — yuqori bayt          */\n\n    p = mul_shift(a, b);     /* 25 * 17 = 425 = 0x01A9 */\n\n    while (1)\n    {\n        PORTB = (uint8_t)(p & 0x00FF);   /* 0xA9 */\n        PORTD = (uint8_t)(p >> 8);       /* 0x01 */\n    }\n}"],
+  ["c","__CONFIG(_HS_OSC & _WDT_OFF & _PWRTE_ON & _BODEN_ON & _LVP_OFF & _CP_OFF & _WRT_OFF & _CPD_OFF);\n\nunsigned int mul_shift(unsigned short a, unsigned short b);\n\nvoid main()\n{\n    unsigned short a = 25, b = 17;\n    unsigned int p;\n\n    TRISB = 0x00;            // PORTB — natijaning quyi bayti\n    TRISD = 0x00;            // PORTD — yuqori bayt\n\n    p = mul_shift(a, b);     // 25 * 17 = 425 = 0x01A9\n\n    while (1)\n    {\n        PORTB = (unsigned short)(p & 0x00FF);   // 0xA9\n        PORTD = (unsigned short)(p >> 8);       // 0x01\n    }\n}"],
   ["n","Diqqat: natijani uint8_t o'zgaruvchiga yozsangiz, yuqori bayt yo'qoladi va 425 o'rniga 169 hosil bo'ladi. Oraliq hisoblarda ham (uint16_t) turiga keltirish shart."],
   ["h","Usullarni taqqoslash"],
   ["t",["Usul","Qadamlar soni","f = 8 MHz da taxminiy vaqt","Kod hajmi"],[["Takrorlangan qo'shish","B ga teng (1–255)","2–500 µs","kichik"],["Siljitish va qo'shish","har doim 8","8–12 µs","o'rtacha"],["Jadvalli (kichik diapazon uchun)","1","1 µs dan kam","katta (xotira sarfi)"]]],
@@ -1723,7 +1725,8 @@ const LESSONS = [
   ["ol",["Proteus 8 ni ishga tushiring va New Project buyrug'i bilan yangi loyiha yarating; sxema shablonini (DEFAULT) tanlang.","ISIS oynasida P (Pick Devices) tugmasi orqali komponentlar kutubxonasini oching.","Qidiruv maydoniga PIC16F877A yozib, mikrokontrollerni tanlang va loyihaga qo'shing.","Xuddi shu tarzda LED-RED, RES (rezistor), BUTTON, CRYSTAL va POT-HG elementlarini qo'shing.","Elementlarni ish maydoniga joylashtiring va Terminals Mode dan POWER hamda GROUND terminallarini qo'shing.","Chiqishlarni sichqoncha bilan ulang: PORTB razryadlariga rezistor orqali LED, MCLR ni 10 kΩ rezistor orqali +5 V ga.","Mikrokontroller ustiga ikki marta bosing, xossalar oynasida Program File maydoniga kompilyatordan olingan HEX faylni ko'rsating va Processor Clock Frequency ni 8 MHz qilib belgilang.","Virtual asboblardan OSCILLOSCOPE, DC VOLTMETER va COUNTER TIMER ni sxemaga ulang.","Play tugmasi bilan modellashtirishni ishga tushiring va natijani kuzating.","Pause rejimida Debug menyusi orqali registrlar va xotira holatini ko'rib chiqing."]],
   ["n","Diqqat: Proteusda rezistorsiz LED yoki ulanmagan MCLR liniyasi ko'pincha modellashtirishning ishlamasligiga sabab bo'ladi. Xatolar ro'yxati Simulation Log oynasida ko'rsatiladi — ish boshlanmasa avvalo shu oynani tekshiring."],
   ["h","Tekshiriladigan dastur"],
-  ["c","#include <xc.h>\n#pragma config FOSC = HS, WDTE = OFF, PWRTE = ON, LVP = OFF\n#define _XTAL_FREQ 8000000UL\n\nvoid main(void)\n{\n    ADCON1 = 0x06;        /* PORTA raqamli rejim */\n    TRISB  = 0x00;        /* PORTB chiqish       */\n    TRISD  = 0xFF;        /* PORTD kirish        */\n\n    while (1)\n    {\n        if (PORTDbits.RD0 == 0)   /* tugma bosilgan   */\n            PORTB = 0xFF;         /* barcha LED yonadi */\n        else\n            PORTB = 0x01;         /* faqat bittasi     */\n        __delay_ms(100);\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","__CONFIG(_HS_OSC & _WDT_OFF & _PWRTE_ON & _LVP_OFF);\n\nvoid main()\n{\n    ADCON1 = 0x06;        // PORTA raqamli rejim\n    TRISB  = 0x00;        // PORTB chiqish\n    TRISD  = 0xFF;        // PORTD kirish\n\n    while (1)\n    {\n        if (PORTD.F0 == 0)    // tugma bosilgan\n            PORTB = 0xFF;     // barcha LED yonadi\n        else\n            PORTB = 0x01;     // faqat bittasi\n        Delay_ms(100);\n    }\n}"],
   ["h","Virtual asboblar"],
   ["t",["Asbob","Vazifasi","Nimani o'lchaymiz"],[["OSCILLOSCOPE","Signal shaklini vaqt bo'yicha ko'rsatish","Impuls davri, davomiyligi, fronti"],["DC/AC VOLTMETER","Kuchlanishni o'lchash","Port chiqishidagi daraja, LED dagi tushuv"],["DC AMMETER","Tokni o'lchash","LED orqali oqayotgan tok"],["COUNTER TIMER","Impulslarni sanash va chastota o'lchash","Generator chastotasi, PWM chastotasi"],["LOGIC ANALYSER","Bir necha raqamli liniyani birga kuzatish","Portlar holatining o'zgarishi"],["VIRTUAL TERMINAL","UART ma'lumotlarini ko'rsatish","Uzatilgan matn va kodlar"]]],
   ["h","Interaktiv qism"],
@@ -1852,7 +1855,8 @@ const LESSONS = [
   ["h","Konfiguratsiya bitlari"],
   ["p","Konfiguratsiya so'zi mikrokontrollerning apparat rejimini belgilaydi va dastur bilan birga kristallga yoziladi. Bu sozlamalar dastur ishga tushishidan oldin amal qiladi, shuning uchun ularni noto'g'ri belgilash kristallning umuman ishlamasligiga olib keladi."],
   ["t",["Bit","Vazifasi","Odatiy qiymat"],[["FOSC","Generator rejimi","HS (4–20 MHz kvarts)"],["WDTE","Watchdog taymer","OFF (o'rganish bosqichida)"],["PWRTE","Quvvat berilgandagi kechikish","ON"],["BOREN","Kuchlanish pasayganda qayta yuklash","ON"],["LVP","Past kuchlanishli dasturlash","OFF (RB3 ni port sifatida ozod qiladi)"],["CP","Kod himoyasi","OFF"]]],
-  ["c","#include <xc.h>\n\n#pragma config FOSC = HS      // yuqori chastotali kvarts\n#pragma config WDTE = OFF     // watchdog o'chirilgan\n#pragma config PWRTE = ON     // quvvat kechikishi yoqilgan\n#pragma config BOREN = ON\n#pragma config LVP = OFF      // RB3 oddiy port sifatida ishlaydi\n#pragma config CPD = OFF, WRT = OFF, CP = OFF\n\n#define _XTAL_FREQ 8000000UL\n\nvoid init_ports(void)\n{\n    ADCON1 = 0x06;    /* PORTA butunlay raqamli */\n    TRISB  = 0x00;    /* chiqish */\n    TRISD  = 0xFF;    /* kirish  */\n    PORTB  = 0x00;\n}\n\nvoid main(void)\n{\n    init_ports();\n    while (1)\n    {\n        PORTB = 0x0F;\n        __delay_ms(300);\n        PORTB = 0xF0;\n        __delay_ms(300);\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","__CONFIG(_HS_OSC & _WDT_OFF & _PWRTE_ON & _BODEN_ON & _LVP_OFF & _CP_OFF & _WRT_OFF & _CPD_OFF);\n\nvoid init_ports()\n{\n    ADCON1 = 0x06;    // PORTA butunlay raqamli\n    TRISB  = 0x00;    // chiqish\n    TRISD  = 0xFF;    // kirish\n    PORTB  = 0x00;\n}\n\nvoid main()\n{\n    init_ports();\n    while (1)\n    {\n        PORTB = 0x0F;\n        Delay_ms(300);\n        PORTB = 0xF0;\n        Delay_ms(300);\n    }\n}"],
   ["h","Tipik xatolar va ularni bartaraf etish"],
   ["t",["Xato","Sababi","Yechimi"],[["__delay_ms ishlamaydi","_XTAL_FREQ e'lon qilinmagan","#define _XTAL_FREQ ni kvarts chastotasiga teng qo'ying"],["Kristall ishga tushmaydi","FOSC noto'g'ri tanlangan","Generator turiga mos rejimni belgilang"],["RB3 port sifatida ishlamaydi","LVP yoqilgan","LVP = OFF qiling"],["PORTA dan 0 o'qiladi","Liniyalar analog rejimda","ADCON1 = 0x06 bilan raqamli rejimga o'tkazing"],["Dastur bir necha soniyada qayta boshlanadi","Watchdog yoqilgan va tozalanmayapti","WDTE = OFF yoki CLRWDT() ni qo'shing"]]],
   ["h","Interaktiv qism"],
@@ -1969,10 +1973,11 @@ const LESSONS = [
   ["p","Arxitektura akkumulyator asosida qurilgan: W (Working) registr ALU ning doimiy operandi bo'lib xizmat qiladi. Ikkinchi operand esa f — fayl registri, ya'ni ma'lumot xotirasidagi yacheyka yoki maxsus funksional registr (PORTB, TRISB, STATUS va boshqalar)."],
   ["h","Buyruqlar guruhlari"],
   ["t",["Guruh","Namunalar","Izoh"],[["Bayt bilan ishlash","MOVWF f, MOVF f,d, ADDWF f,d, SUBWF f,d, CLRF f, INCF f,d","Natija d = 0 bo'lsa W ga, d = 1 bo'lsa f ga yoziladi"],["Bit bilan ishlash","BSF f,b, BCF f,b, BTFSS f,b, BTFSC f,b","Alohida razryadni o'rnatish, tozalash va tekshirish"],["Konstanta va boshqaruv","MOVLW k, ADDLW k, ANDLW k, CALL, GOTO, RETURN, RETFIE","k — bevosita berilgan sakkiz razryadli qiymat"]]],
-  ["c","; Tipik buyruqlar va ularning ma'nosi\n    MOVLW  0x0F      ; W <- 0x0F                (1 sikl)\n    MOVWF  TRISB     ; TRISB <- W               (1 sikl)\n    BSF    PORTB, 0  ; PORTB ning 0-biti = 1    (1 sikl)\n    BCF    PORTB, 0  ; PORTB ning 0-biti = 0    (1 sikl)\n    BTFSS  PORTD, 0  ; RD0 = 1 bo'lsa keyingi buyruq tashlab ketiladi\n    GOTO   LOOP      ; o'tish                   (2 sikl)\n    ADDWF  0x20, 1   ; (0x20) <- (0x20) + W\n    DECFSZ 0x21, 1   ; (0x21)-- ; natija 0 bo'lsa keyingi buyruq tashlanadi"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","; mikroC PRO inline assembler: asm {} ichida PIC buyruqlari\nasm {\nLOOP:\n    MOVLW  0x0F      ; W <- 0x0F                (1 sikl)\n    MOVWF  TRISB     ; TRISB <- W               (1 sikl)\n    BSF    PORTB, 0  ; PORTB ning 0-biti = 1    (1 sikl)\n    BCF    PORTB, 0  ; PORTB ning 0-biti = 0    (1 sikl)\n    BTFSS  PORTD, 0  ; RD0 = 1 bo'lsa keyingi buyruq tashlab ketiladi\n    GOTO   LOOP      ; o'tish                   (2 sikl)\n    ADDWF  0x20, 1   ; (0x20) <- (0x20) + W\n    DECFSZ 0x21, 1   ; (0x21)-- ; natija 0 bo'lsa keyingi buyruq tashlanadi\n}"],
   ["h","Shartli bajarish mexanizmi"],
   ["p","PIC da shartli o'tish buyruqlari yo'q. Uning o'rniga \"tekshir va tashlab ket\" (skip) buyruqlari ishlatiladi: BTFSS, BTFSC, DECFSZ, INCFSZ. Shart bajarilsa keyingi buyruq NOP bilan almashtiriladi va u ikki sikl oladi, aks holda odatdagidek bajariladi. Shu sababli PIC da shart quyidagicha yoziladi:"],
-  ["c","; Tugma bosilganmi? (RD0 = 0 bo'lsa bosilgan)\nLOOP:\n    BTFSS  PORTD, 0   ; RD0 = 1 bo'lsa keyingisini tashlab ket\n    GOTO   BOSILGAN   ; RD0 = 0 -> tugma bosilgan\n    BCF    PORTB, 0   ; bosilmagan: LED o'chadi\n    GOTO   LOOP\nBOSILGAN:\n    BSF    PORTB, 0   ; LED yonadi\n    GOTO   LOOP"],
+  ["c","; Tugma bosilganmi? (RD0 = 0 bo'lsa bosilgan)\nasm {\nTEKSHIR:\n    BTFSS  PORTD, 0   ; RD0 = 1 bo'lsa keyingisini tashlab ket\n    GOTO   BOSILGAN   ; RD0 = 0 -> tugma bosilgan\n    BCF    PORTB, 0   ; bosilmagan: LED o'chadi\n    GOTO   TEKSHIR\nBOSILGAN:\n    BSF    PORTB, 0   ; LED yonadi\n    GOTO   TEKSHIR\n}"],
   ["h","Bajarilish vaqti hisobi"],
   ["f","t = (N1 · 1 + N2 · 2) · 4 / f_osc","N1 — bir sikli, N2 — ikki sikli buyruqlar soni."],
   ["p","Misol. f = 8 MHz, mashina sikli 500 ns. Sikl tanasi 6 ta bir sikli va 2 ta ikki sikli buyruqdan iborat bo'lsa: t = (6 + 4) · 500 ns = 5 µs. Demak sikl sekundiga taxminan 200 000 marta takrorlanadi."],
@@ -2104,7 +2109,8 @@ const LESSONS = [
   ["t",["Belgi","Ehtimoliy sabab","Tekshirish"],[["Hech narsa ishlamaydi","Quvvat yo'q yoki MCLR pastda","VDD va MCLR da kuchlanishni o'lchash"],["Kristall qayta yuklanaveradi","Watchdog yoqilgan, tozalanmagan","WDTE bitini va CLRWDT() ni tekshirish"],["Dastur juda sekin ishlaydi","Generator ichki RC ga tushib qolgan","FOSC konfiguratsiyasini tekshirish"],["PORTA dan hech narsa o'qilmaydi","Liniyalar analog rejimda","ADCON1 registrini sozlash"],["LED xira yonadi","Rezistor qiymati katta yoki quvvat pasaygan","Tokni o'lchash, R ni hisoblash"],["Tugma bir bosishga bir necha marta ishlaydi","Kontaktlar titrashi filtrlanmagan","Dasturiy kechikish qo'shish"]]],
   ["h","Dasturiy otladka usullari"],
   ["ul",["Qadamma-qadam bajarish (Step Into / Step Over) — har bir buyruqdan keyin registrlar holatini kuzatish","To'xtash nuqtalari (breakpoint) — dasturni kerakli joyda to'xtatib, o'zgaruvchilarni tekshirish","Watch oynasi — tanlangan o'zgaruvchi va registrlar qiymatini real vaqtda kuzatish","Stopwatch — ikki nuqta orasidagi sikllar sonini va vaqtni o'lchash","Diagnostik chiqish — bo'sh port razryadiga LED ulab, dastur qaysi tarmoqqa kirganini ko'rsatish","UART orqali nosozlik xabarlarini kompyuterga yuborish"]],
-  ["c","/* Diagnostik belgilar bilan tekshirish */\nvoid main(void)\n{\n    init_ports();\n    PORTBbits.RB7 = 1;      /* 1-belgi: sozlash tugadi */\n\n    while (1)\n    {\n        if (PORTDbits.RD0 == 0)\n        {\n            PORTBbits.RB6 = 1;   /* 2-belgi: shart bajarildi */\n            PORTB |= 0x0F;\n        }\n        else\n        {\n            PORTBbits.RB6 = 0;\n            PORTB &= 0xF0;\n        }\n        __delay_ms(50);\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","/* Diagnostik belgilar bilan tekshirish (init_ports — oldingi ishdan) */\nvoid main()\n{\n    init_ports();\n    PORTB.F7 = 1;           // 1-belgi: sozlash tugadi\n\n    while (1)\n    {\n        if (PORTD.F0 == 0)\n        {\n            PORTB.F6 = 1;   // 2-belgi: shart bajarildi\n            PORTB |= 0x0F;\n        }\n        else\n        {\n            PORTB.F6 = 0;\n            PORTB &= 0xF0;\n        }\n        Delay_ms(50);\n    }\n}"],
   ["h","Interaktiv qism"],
   ["p","Tugma simulyatorida drebezg rejimini yoqib, filtrsiz hisoblagichning noto'g'ri ishlashini kuzating — bu amalda eng ko'p uchraydigan \"dastur to'g'ri, lekin qurilma noto'g'ri ishlaydi\" holati."],
   ["sim","btnled"],
@@ -2348,11 +2354,12 @@ const LESSONS = [
   ["f","R = (U_cc − U_led) / I_led","U_cc = 5 V, U_led = 2 V, I = 10 mA → R = 300 Ω, standart qatordan 330 Ω olinadi."],
   ["p","Chiqish liniyasining ruxsat etilgan toki PIC16F877A uchun 25 mA, butun port uchun 100 mA, kristall uchun jami 200 mA ni tashkil qiladi. Sakkizta LED ni bir vaqtda 20 mA bilan yoqish port chegarasidan oshib ketadi, shuning uchun tok 8–10 mA atrofida tanlanadi yoki tashqi drayver qo'yiladi."],
   ["h","Portni sozlash va boshqarish"],
-  ["c","#include <xc.h>\n#pragma config FOSC = HS, WDTE = OFF, LVP = OFF\n#define _XTAL_FREQ 8000000UL\n\nvoid main(void)\n{\n    ADCON1 = 0x06;      /* PORTA raqamli rejim */\n    TRISB  = 0x00;      /* PORTB butunlay chiqish */\n    TRISD  = 0xFF;      /* PORTD butunlay kirish  */\n    TRISC  = 0xF0;      /* RC0-RC3 chiqish, RC4-RC7 kirish */\n    PORTB  = 0x00;\n\n    while (1)\n    {\n        PORTB = PORTD;           /* kirishdagi kodni chiqishga uzatish */\n        PORTBbits.RB7 = 1;       /* faqat 7-razryadni yoqish */\n        PORTB |=  0x03;          /* 0 va 1-razryadlarni yoqish */\n        PORTB &= ~0x0C;          /* 2 va 3-razryadlarni o'chirish */\n        PORTB ^=  0x10;          /* 4-razryad holatini almashtirish */\n        __delay_ms(200);\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","__CONFIG(_HS_OSC & _WDT_OFF & _LVP_OFF);\n\nvoid main()\n{\n    ADCON1 = 0x06;      // PORTA raqamli rejim\n    TRISB  = 0x00;      // PORTB butunlay chiqish\n    TRISD  = 0xFF;      // PORTD butunlay kirish\n    TRISC  = 0xF0;      // RC0-RC3 chiqish, RC4-RC7 kirish\n    PORTB  = 0x00;\n\n    while (1)\n    {\n        PORTB = PORTD;           // kirishdagi kodni chiqishga uzatish\n        PORTB.F7 = 1;            // faqat 7-razryadni yoqish\n        PORTB |= 0x03;           // 0 va 1-razryadlarni yoqish\n        PORTB &= ~0x0C;          // 2 va 3-razryadlarni o'chirish\n        PORTB ^= 0x10;           // 4-razryad holatini almashtirish\n        Delay_ms(200);\n    }\n}"],
   ["h","Maskalash amallari"],
   ["t",["Vazifa","Amal","Namuna"],[["Razryadni yoqish","OR maska bilan","PORTB |= 0x01"],["Razryadni o'chirish","AND inversiyalangan maska bilan","PORTB &= ~0x01"],["Razryad holatini almashtirish","XOR maska bilan","PORTB ^= 0x01"],["Razryadni tekshirish","AND maska va solishtirish","if (PORTD & 0x01)"],["Quyi tetradani ajratish","AND 0x0F","x = PORTD & 0x0F"],["Yuqori tetradani quyiga ko'chirish","O'ngga siljitish","x = PORTD >> 4"]]],
   ["h","Yuguruvchi olov"],
-  ["c","    uint8_t m = 0x01;\n    while (1)\n    {\n        PORTB = m;\n        __delay_ms(120);\n        m <<= 1;              /* keyingi razryadga siljitish */\n        if (m == 0)           /* chetdan chiqib ketdi */\n            m = 0x01;         /* boshidan boshlash    */\n    }"],
+  ["c","    unsigned short m = 0x01;\n    while (1)\n    {\n        PORTB = m;\n        Delay_ms(120);\n        m <<= 1;              // keyingi razryadga siljitish\n        if (m == 0)           // chetdan chiqib ketdi\n            m = 0x01;         // boshidan boshlash\n    }"],
   ["p","Bu dastur PORTB ning razryadlarini navbat bilan yoqadi. Siljitish 8 marta bajarilgach qiymat nolga aylanadi va tekshiruv uni qayta boshlang'ich holatga qaytaradi."],
   ["h","Interaktiv qism"],
   ["sim","port"],
@@ -2475,11 +2482,12 @@ const LESSONS = [
   ["h","Kontaktlar titrashi"],
   ["p","Mexanik kontakt ulanish va uzilish paytida bir necha marta sakraydi va 1–10 ms davomida o'nlab noto'g'ri o'tishlar hosil qiladi. Filtrlanmasa, bitta bosish bir necha marta qayd etiladi. Dasturiy filtr eng sodda va arzon yechim: birinchi o'zgarish aniqlangach 15–20 ms kutiladi va holat qayta tekshiriladi."],
   ["h","Ikki ish rejimi"],
-  ["c","/* 1-rejim: tugma bosilgan vaqtda LED yonadi */\n#include <xc.h>\n#pragma config FOSC = HS, WDTE = OFF, LVP = OFF\n#define _XTAL_FREQ 8000000UL\n\nvoid main(void)\n{\n    ADCON1 = 0x06;\n    TRISBbits.TRISB0 = 0;      /* LED chiqish   */\n    TRISDbits.TRISD0 = 1;      /* tugma kirish  */\n\n    while (1)\n    {\n        if (PORTDbits.RD0 == 0)   PORTBbits.RB0 = 1;\n        else                      PORTBbits.RB0 = 0;\n    }\n}"],
-  ["c","/* 2-rejim: har bosishda LED holati almashadi (toggle) */\n    while (1)\n    {\n        if (PORTDbits.RD0 == 0)          /* bosildi?          */\n        {\n            __delay_ms(20);              /* drebezg filtri    */\n            if (PORTDbits.RD0 == 0)      /* hamon bosilganmi? */\n            {\n                PORTBbits.RB0 = ~PORTBbits.RB0;   /* holatni almashtirish */\n                while (PORTDbits.RD0 == 0);       /* qo'yib yuborishni kutish */\n                __delay_ms(20);\n            }\n        }\n    }"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","/* 1-rejim: tugma bosilgan vaqtda LED yonadi */\n%s\n\nvoid main()\n{\n    ADCON1 = 0x06;\n    TRISB.F0 = 0;          // LED chiqish\n    TRISD.F0 = 1;          // tugma kirish\n\n    while (1)\n    {\n        if (PORTD.F0 == 0) PORTB.F0 = 1;\n        else               PORTB.F0 = 0;\n    }\n}"],
+  ["c","/* 2-rejim: har bosishda LED holati almashadi (toggle) */\nwhile (1)\n{\n    if (PORTD.F0 == 0)                 // bosildi?\n    {\n        Delay_ms(20);                  // drebezg filtri\n        if (PORTD.F0 == 0)             // hamon bosilganmi?\n        {\n            PORTB.F0 = !PORTB.F0;      // holatni almashtirish\n            while (PORTD.F0 == 0);     // qo'yib yuborishni kutish\n            Delay_ms(20);\n        }\n    }\n}"],
   ["p","Ikkinchi rejimda uchta muhim element bor: filtr kechikishi, holatni inversiyalash va tugma qo'yib yuborilishini kutish. Oxirgi qadam bo'lmasa, tugma ushlab turilganda LED uzluksiz miltillaydi."],
   ["h","Assembler varianti"],
-  ["c","LOOP:\n      BTFSC  PORTD, 0     ; RD0 = 0 bo'lsa keyingisini tashlab ket\n      GOTO   OCHIQ        ; RD0 = 1 -> tugma bosilmagan\n      BSF    PORTB, 0     ; bosilgan -> LED yonadi\n      GOTO   LOOP\nOCHIQ:\n      BCF    PORTB, 0\n      GOTO   LOOP"],
+  ["c","; 3-rejim: assembler variant (inline asm)\nasm {\nLOOP:\n    BTFSC  PORTD, 0     ; RD0 = 0 bo'lsa keyingisini tashlab ket\n    GOTO   OCHIQ        ; RD0 = 1 -> tugma bosilmagan\n    BSF    PORTB, 0     ; bosilgan -> LED yonadi\n    GOTO   LOOP\nOCHIQ:\n    BCF    PORTB, 0\n    GOTO   LOOP\n}"],
   ["h","Interaktiv qism"],
   ["sim","btnled"],
   ["h","Topshiriqlar"],
@@ -2591,13 +2599,14 @@ const LESSONS = [
   ["h","Nazariy tushunchalar"],
   ["p","Bir nechta tugma bilan ishlashda ikki yondashuv mavjud. Birinchisi — har bir tugmani alohida tekshirish; bu sodda, lekin tugmalar soni ortganda kod uzayadi. Ikkinchisi — portni bir butun bayt sifatida o'qib, maskalash orqali kombinatsiyani aniqlash; bu usul ixcham va tez."],
   ["p","Pull-up sxemasida bosilmagan tugmalar 1 beradi, shuning uchun o'qilgan qiymat inversiyalanadi — shunda bosilgan tugmalar mantiqiy bir bilan belgilanadi va kod o'qilishi osonlashadi."],
-  ["c","    uint8_t k;\n    k = ~PORTD & 0x0F;   /* faqat RD0..RD3, bosilganlar = 1 */\n\n    switch (k)\n    {\n        case 0x01: PORTB = 0x0F; break;   /* 1-tugma          */\n        case 0x02: PORTB = 0xF0; break;   /* 2-tugma          */\n        case 0x03: PORTB = 0xFF; break;   /* 1 va 2 birgalikda */\n        case 0x04: PORTB = 0xAA; break;   /* 3-tugma          */\n        case 0x08: PORTB = 0x55; break;   /* 4-tugma          */\n        default:   PORTB = 0x00; break;   /* hech biri        */\n    }"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","unsigned short k;\n\nk = ~PORTD & 0x0F;       // faqat RD0..RD3, bosilganlar = 1\n\nswitch (k)\n{\n    case 0x01: PORTB = 0x0F; break;   // 1-tugma\n    case 0x02: PORTB = 0xF0; break;   // 2-tugma\n    case 0x03: PORTB = 0xFF; break;   // 1 va 2 birgalikda\n    case 0x04: PORTB = 0xAA; break;   // 3-tugma\n    case 0x08: PORTB = 0x55; break;   // 4-tugma\n    default:   PORTB = 0x00; break;   // hech biri\n}"],
   ["h","Prioritetli ishlov"],
   ["p","Agar bir vaqtda bir nechta tugma bosilishi mumkin bo'lsa va faqat bittasi hisobga olinishi kerak bo'lsa, prioritet tartibi belgilanadi. Quyidagi kodda pastki raqamli tugma yuqori prioritetga ega: birinchi mos kelgan shart bajarilgach qolganlari tekshirilmaydi."],
-  ["c","    if      (!PORTDbits.RD0) PORTB = 0x01;   /* eng yuqori prioritet */\n    else if (!PORTDbits.RD1) PORTB = 0x02;\n    else if (!PORTDbits.RD2) PORTB = 0x04;\n    else if (!PORTDbits.RD3) PORTB = 0x08;\n    else                     PORTB = 0x00;"],
+  ["c","if      (!PORTD.F0) PORTB = 0x01;   // eng yuqori prioritet\nelse if (!PORTD.F1) PORTB = 0x02;\nelse if (!PORTD.F2) PORTB = 0x04;\nelse if (!PORTD.F3) PORTB = 0x08;\nelse                PORTB = 0x00;"],
   ["h","Uch tugmali boshqaruv namunasi"],
   ["t",["Tugma","Vazifasi","Amal"],[["RD0 — START","Yuguruvchi olovni ishga tushirish","bayroq = 1"],["RD1 — STOP","To'xtatish va joriy holatni saqlash","bayroq = 0"],["RD2 — RESET","Boshlang'ich holatga qaytish","maska = 0x01, PORTB = 0"],["RD0 + RD1","Yo'nalishni almashtirish","yonalish = ~yonalish"]]],
-  ["c","    uint8_t m = 0x01, ishla = 0, yonalish = 0;\n\n    while (1)\n    {\n        uint8_t k = ~PORTD & 0x07;\n        if (k) { __delay_ms(20); k = ~PORTD & 0x07; }   /* drebezg filtri */\n\n        if      (k == 0x03) { yonalish = !yonalish; while(~PORTD & 0x07); }\n        else if (k == 0x01)   ishla = 1;\n        else if (k == 0x02)   ishla = 0;\n        else if (k == 0x04) { m = 0x01; PORTB = 0; }\n\n        if (ishla)\n        {\n            PORTB = m;\n            if (yonalish) { m <<= 1; if (!m) m = 0x01; }\n            else          { m >>= 1; if (!m) m = 0x80; }\n            __delay_ms(150);\n        }\n    }"],
+  ["c","unsigned short m = 0x01, ishla = 0, yonalish = 0, k;\n\nwhile (1)\n{\n    k = ~PORTD & 0x07;\n    if (k) { Delay_ms(20); k = ~PORTD & 0x07; }   // drebezg filtri\n\n    if      (k == 0x03) { yonalish = !yonalish; while (~PORTD & 0x07); }\n    else if (k == 0x01)   ishla = 1;\n    else if (k == 0x02)   ishla = 0;\n    else if (k == 0x04) { m = 0x01; PORTB = 0; }\n\n    if (ishla)\n    {\n        PORTB = m;\n        if (yonalish) { m <<= 1; if (!m) m = 0x01; }\n        else          { m >>= 1; if (!m) m = 0x80; }\n        Delay_ms(150);\n    }\n}"],
   ["h","Klaviatura matritsasi haqida"],
   ["p","Tugmalar soni ko'p bo'lganda har biriga alohida liniya ajratish isrof bo'ladi. Matritsa usulida 16 ta tugma atigi 8 ta liniyaga (4 satr + 4 ustun) ulanadi: satrlarga navbat bilan nol beriladi va ustunlar o'qiladi, nol qaytgan ustun bosilgan tugmani ko'rsatadi. Bu usul keyingi semestrdagi klaviatura ishida batafsil o'rganiladi."],
   ["n","Bir vaqtda ikkita tugma bosilganda matritsada \"soyabon\" (ghosting) effekti paydo bo'ladi: bosilmagan tugma ham bosilgandek ko'rinadi. Buning oldini olish uchun har bir tugmaga ketma-ket diod qo'yiladi."],
@@ -2717,11 +2726,12 @@ const LESSONS = [
   ["t",["Kod","Buyruq","Bajarilish vaqti"],[["0x01","Ekranni tozalash va kursorni boshga qaytarish","~1,6 ms"],["0x02","Kursorni boshga qaytarish","~1,6 ms"],["0x06","Yozishdan keyin kursor o'ngga suriladi","40 µs"],["0x0C","Ekran yoqiladi, kursor ko'rinmaydi","40 µs"],["0x0E","Ekran va kursor yoqiladi","40 µs"],["0x28","4 bitli rejim, 2 qator, 5×8 shrift","40 µs"],["0x80","Kursorni 1-qator boshiga qo'yish","40 µs"],["0xC0","Kursorni 2-qator boshiga qo'yish","40 µs"]]],
   ["n","Diqqat: 0x01 va 0x02 buyruqlari boshqa buyruqlardan ancha uzoq bajariladi. Ular berilgandan keyin kamida 2 ms kutilmasa, keyingi buyruq yo'qoladi va ekranda buzilgan belgilar paydo bo'ladi."],
   ["h","Boshlang'ich sozlash va chiqarish"],
-  ["c","#include <xc.h>\n#define _XTAL_FREQ 8000000UL\n#define RS  PORTDbits.RD2\n#define EN  PORTDbits.RD3\n\nvoid lcd_nibble(uint8_t n)\n{\n    PORTD = (PORTD & 0x0F) | (n & 0xF0);  /* D4-D7 -> RD4..RD7 */\n    EN = 1; __delay_us(2); EN = 0; __delay_us(50);\n}\nvoid lcd_cmd(uint8_t c)\n{\n    RS = 0;\n    lcd_nibble(c & 0xF0);\n    lcd_nibble((uint8_t)(c << 4));\n    if (c == 0x01 || c == 0x02) __delay_ms(2);\n}\nvoid lcd_data(uint8_t d)\n{\n    RS = 1;\n    lcd_nibble(d & 0xF0);\n    lcd_nibble((uint8_t)(d << 4));\n}\nvoid lcd_init(void)\n{\n    __delay_ms(20);       /* quvvat berilgandan keyin kutish */\n    lcd_nibble(0x30); __delay_ms(5);\n    lcd_nibble(0x30); __delay_us(200);\n    lcd_nibble(0x30); __delay_us(200);\n    lcd_nibble(0x20);     /* 4 bitli rejimga o'tish */\n    lcd_cmd(0x28); lcd_cmd(0x0C); lcd_cmd(0x06); lcd_cmd(0x01);\n}\nvoid lcd_text(const char *s)\n{\n    while (*s) lcd_data((uint8_t)*s++);\n}"],
-  ["c","void main(void)\n{\n    ADCON1 = 0x06;\n    TRISD  = 0x00;\n    lcd_init();\n\n    lcd_cmd(0x80);  lcd_text(\"MIKROPROTSESSOR\");\n    lcd_cmd(0xC0);  lcd_text(\"TEXNIKASI  TDTU\");\n\n    while (1) { }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","/* LCD 2x16 (HD44780), 4 bitli rejim, PORTD ga ulangan — mikroC LCD kutubxonasi */\nsbit LCD_RS at RD2_bit;\nsbit LCD_EN at RD3_bit;\nsbit LCD_D4 at RD4_bit;\nsbit LCD_D5 at RD5_bit;\nsbit LCD_D6 at RD6_bit;\nsbit LCD_D7 at RD7_bit;\nsbit LCD_RS_Direction at TRISD2_bit;\nsbit LCD_EN_Direction at TRISD3_bit;\nsbit LCD_D4_Direction at TRISD4_bit;\nsbit LCD_D5_Direction at TRISD5_bit;\nsbit LCD_D6_Direction at TRISD6_bit;\nsbit LCD_D7_Direction at TRISD7_bit;"],
+  ["c","void main()\n{\n    ADCON1 = 0x06;\n    TRISD  = 0x00;\n    Lcd_Init();\n    Lcd_Cmd(_LCD_CLEAR);\n    Lcd_Cmd(_LCD_CURSOR_OFF);\n\n    Lcd_Out(1, 1, \"MIKROPROTSESSOR\");\n    Lcd_Out(2, 1, \"TEXNIKASI  TDTU\");\n\n    while (1) { }\n}"],
   ["h","Sonni ekranga chiqarish"],
   ["p","LCD faqat belgilarni ko'rsatadi, shuning uchun sonni avval raqamlarga ajratib, har biriga 0x30 qo'shish kerak — shunda ASCII kodi hosil bo'ladi."],
-  ["c","void lcd_son(uint16_t n)          /* 0..999 */\n{\n    lcd_data((uint8_t)(n / 100)       + '0');\n    lcd_data((uint8_t)((n / 10) % 10) + '0');\n    lcd_data((uint8_t)(n % 10)        + '0');\n}"],
+  ["c","/* Uch xonali sonni LCD ga chiqarish: 0..999 */\nvoid lcd_son(unsigned int n)\n{\n    Lcd_Chr_Cp((n / 100) + '0');\n    Lcd_Chr_Cp(((n / 10) % 10) + '0');\n    Lcd_Chr_Cp((n % 10) + '0');\n}"],
   ["h","Interaktiv qism"],
   ["sim","lcd"],
   ["h","Topshiriqlar"],
@@ -2847,11 +2857,12 @@ const LESSONS = [
   ["p","O'zgartirish takti TAD 1,6 µs dan kichik bo'lmasligi kerak. f = 8 MHz da FOSC/16 bo'luvchisi TAD = 2 µs beradi — bu talabga javob beradi. To'liq o'zgartirish 12 TAD, ya'ni taxminan 24 µs davom etadi."],
   ["n","Kanal almashtirilgandan keyin darhol o'zgartirishni boshlash mumkin emas: ichki namuna-saqlash kondensatori zaryadlanishi uchun kamida 20 µs kutish (acquisition time) talab qilinadi. Bu qadam tashlab ketilsa, natija oldingi kanal qiymatiga aralashadi."],
   ["h","Dastur"],
-  ["c","#include <xc.h>\n#pragma config FOSC = HS, WDTE = OFF, LVP = OFF\n#define _XTAL_FREQ 8000000UL\n\nvoid adc_init(void)\n{\n    ADCON1 = 0x80;    /* ADFM = 1 (o'ngga tekislash), AN0 analog, VREF = VDD */\n    ADCON0 = 0x41;    /* FOSC/16, kanal 0, ADON = 1 */\n    TRISAbits.TRISA0 = 1;\n}\n\nuint16_t adc_read(uint8_t kanal)\n{\n    ADCON0 &= 0xC5;                 /* eski kanalni tozalash */\n    ADCON0 |= (uint8_t)(kanal << 3);/* yangi kanalni tanlash */\n    __delay_us(30);                 /* namuna olish vaqti   */\n    GO_nDONE = 1;                   /* o'zgartirishni boshlash */\n    while (GO_nDONE);               /* tugashini kutish     */\n    return (uint16_t)((ADRESH << 8) | ADRESL);\n}\n\nvoid main(void)\n{\n    uint16_t kod;\n    uint16_t mv;\n\n    adc_init();\n    TRISB = 0x00;\n\n    while (1)\n    {\n        kod = adc_read(0);\n        mv  = (uint16_t)((uint32_t)kod * 5000UL / 1023UL);  /* millivoltda */\n        PORTB = (uint8_t)(kod >> 2);   /* 10 bitdan 8 bitni LEDlarga */\n        __delay_ms(200);\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","__CONFIG(_HS_OSC & _WDT_OFF & _LVP_OFF);\n\n/* ADC modul: mikroC ADC kutubxonasi (ADC_Init, ADC_Read — 10 bitli natija, 0..1023) */\nvoid main()\n{\n    unsigned int kod;\n    unsigned long mv;\n\n    ADC_Init();\n    TRISB = 0x00;\n\n    while (1)\n    {\n        kod = ADC_Read(0);                              // AN0 kanali\n        mv  = (unsigned long)kod * 5000UL / 1023UL;     // millivoltda\n        PORTB = (unsigned short)(kod >> 2);             // 10 bitdan 8 bitni LEDlarga\n        Delay_ms(200);\n    }\n}"],
   ["p","Kodda kuchlanish millivoltda hisoblanadi, chunki mikrokontrollerda kasr sonlar bilan ishlash ko'p resurs talab qiladi. 32 razryadli oraliq turga keltirish esa ko'paytirishda to'lib ketishning oldini oladi."],
   ["h","Aniqlikni oshirish usullari"],
   ["ol",["Kirishga RC filtr qo'yish (masalan 1 kΩ va 0,1 µF) — yuqori chastotali shovqinni yutadi","Bir necha o'lchashning o'rtachasini olish: 8 yoki 16 marta o'lchab, yig'indini siljitish bilan bo'lish","VREF+ sifatida aniq tashqi kuchlanish manbaidan foydalanish","Analog va raqamli umumiy simlarni bitta nuqtada birlashtirish","Datchik chiqishi yuqori qarshilikli bo'lsa, operatsion kuchaytirgichli bufer qo'yish"]],
-  ["c","uint16_t adc_ortacha(uint8_t kanal)\n{\n    uint32_t s = 0;\n    for (uint8_t i = 0; i < 8; i++) { s += adc_read(kanal); __delay_us(50); }\n    return (uint16_t)(s >> 3);     /* 8 ga bo'lish */\n}"],
+  ["c","/* 8 o'lchashning o'rtachasi */\nunsigned int adc_ortacha(unsigned short kanal)\n{\n    unsigned long s = 0;\n    unsigned short i;\n    for (i = 0; i < 8; i++)\n    {\n        s += ADC_Read(kanal);\n        Delay_us(50);\n    }\n    return (unsigned int)(s >> 3);     // 8 ga bo'lish\n}"],
   ["sim","adc"],
   ["h","Topshiriqlar"],
   ["ol",["O'zgaruvchan rezistorni AN0 kanaliga ulang va ADC ni sozlang.","Rezistorni 0 dan maksimumgacha burib, kod va multimetr ko'rsatkichini jadvalga yozing (kamida 6 nuqta).","Variant raqamingiz N bo'lsin: kirish kuchlanishi (1 + N/10) V bo'lganda kutilayotgan kodni hisoblang va tajriba bilan solishtiring.","Kvantlash qadamini hisoblang va o'lchash xatosini baholang.","8 martalik o'rtachalash funksiyasini qo'shib, natijaning barqarorlashuvini kuzating.","Natijani LCD ga voltda chiqaruvchi kod qismini yozing.","O'lchash jadvali yoki ekran rasmini yuklang."]],
@@ -2977,7 +2988,8 @@ const LESSONS = [
   ["f","CCPR1L:CCP1CON<5:4> = 4 · (PR2 + 1) · D","10 razryadli to'ldirish qiymati. D = 0,5 va PR2 = 124 → 250."],
   ["p","To'ldirish 10 razryadli qiymat bilan beriladi: yuqori 8 bit CCPR1L registrida, quyi 2 bit esa CCP1CON registrining 4- va 5-razryadlarida saqlanadi. Amaliyotda ko'pincha faqat CCPR1L ishlatiladi va bu 8 razryadli aniqlik beradi."],
   ["h","Dastur"],
-  ["c","#include <xc.h>\n#pragma config FOSC = HS, WDTE = OFF, LVP = OFF\n#define _XTAL_FREQ 8000000UL\n\nvoid pwm_init(void)\n{\n    PR2     = 124;      /* f_pwm = 1 kHz (K = 16) */\n    CCP1CON = 0x0C;     /* CCP1 PWM rejimida       */\n    T2CON   = 0x06;     /* Timer2 yoqilgan, bo'luvchi 1:16 */\n    TRISCbits.TRISC2 = 0;   /* CCP1 chiqishi */\n}\n\nvoid pwm_duty(uint8_t percent)      /* 0..100 % */\n{\n    uint16_t d = (uint16_t)((4UL * (PR2 + 1) * percent) / 100UL);\n    CCPR1L   = (uint8_t)(d >> 2);\n    CCP1CON  = (uint8_t)((CCP1CON & 0xCF) | ((d & 0x03) << 4));\n}\n\nvoid main(void)\n{\n    pwm_init();\n    while (1)\n    {\n        for (uint8_t p = 0; p <= 100; p += 5) { pwm_duty(p); __delay_ms(60); }\n        for (uint8_t p = 100; p > 0; p -= 5)  { pwm_duty(p); __delay_ms(60); }\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","__CONFIG(_HS_OSC & _WDT_OFF & _LVP_OFF);\n\nvoid pwm_init()\n{\n    PR2      = 124;       // f_pwm = 1 kHz (K = 16)\n    CCP1CON  = 0x0C;      // CCP1 PWM rejimida\n    T2CON    = 0x06;      // Timer2 yoqilgan, bo'luvchi 1:16\n    TRISC.F2 = 0;         // CCP1 chiqishi\n}\n\nvoid pwm_duty(unsigned short percent)     // 0..100 %\n{\n    unsigned long d = (4UL * (PR2 + 1) * percent) / 100UL;\n    CCPR1L  = (unsigned short)(d >> 2);\n    CCP1CON = (unsigned short)((CCP1CON & 0xCF) | ((d & 0x03) << 4));\n}\n\nvoid main()\n{\n    unsigned short p;\n    pwm_init();\n    while (1)\n    {\n        for (p = 0; p <= 100; p += 5) { pwm_duty(p); Delay_ms(60); }\n        for (p = 100; p > 0; p -= 5)  { pwm_duty(p); Delay_ms(60); }\n    }\n}"],
   ["p","Bu dastur LED yorqinligini silliq oshirib-kamaytiradi. Dvigatel boshqarishda pwm_duty funksiyasiga ADC dan olingan qiymat uzatiladi — shunda potensiometr bilan tezlik boshqariladi."],
   ["h","Yuklamani ulash"],
   ["t",["Yuklama","Ulash","Izoh"],[["LED","Rezistor orqali bevosita","10 mA gacha"],["Kichik dvigatel","MOSFET yoki tranzistor kaliti","Teskari diod majburiy"],["Dvigatelni ikki yo'nalishda","L293D ko'prigi orqali","PWM ruxsat kirishiga beriladi"],["Isitgich, lampa","Optron va simistor orqali","Tarmoq kuchlanishida galvanik ajratish shart"],["Analog kuchlanish","RC past chastotali filtr","Kesish chastotasi f_pwm dan ancha kichik bo'lsin"]]],
@@ -3102,7 +3114,8 @@ const LESSONS = [
   ["f","T = N · U_ref / (1023 · 0,01)","Kod orqali haroratni hisoblash. Uref = 5 V uchun T ≈ N · 0,489."],
   ["p","Aniqlikni oshirish uchun Uref sifatida 2,56 V yoki 1,024 V li aniq manbadan foydalanish mumkin — shunda kvantlash qadami ikki-besh barobar kichrayadi va bitta kod 0,1–0,25 °C ni beradi."],
   ["h","Dastur"],
-  ["c","#include <xc.h>\n#pragma config FOSC = HS, WDTE = OFF, LVP = OFF\n#define _XTAL_FREQ 8000000UL\n\n/* lcd_init, lcd_cmd, lcd_data, lcd_text — oldingi ishdan */\nuint16_t adc_read(uint8_t kanal);\n\nuint16_t harorat_olish(void)      /* natija 0,1 °C birliklarida */\n{\n    uint32_t s = 0;\n    for (uint8_t i = 0; i < 16; i++) { s += adc_read(0); __delay_ms(2); }\n    s >>= 4;                              /* 16 ta o'lchashning o'rtachasi */\n    return (uint16_t)(s * 4890UL / 1000UL / 10UL);   /* mV -> 0,1 °C */\n}\n\nvoid main(void)\n{\n    uint16_t t;\n    adc_init();\n    lcd_init();\n    TRISB = 0x00;\n\n    lcd_cmd(0x80); lcd_text(\"Harorat:\");\n\n    while (1)\n    {\n        t = harorat_olish();\n\n        lcd_cmd(0xC0);\n        lcd_data((uint8_t)(t / 100) + '0');\n        lcd_data((uint8_t)((t / 10) % 10) + '0');\n        lcd_data('.');\n        lcd_data((uint8_t)(t % 10) + '0');\n        lcd_data(' '); lcd_data(0xDF); lcd_data('C');   /* daraja belgisi */\n\n        if (t >= 400) PORTBbits.RB0 = 1;    /* 40,0 °C dan yuqori — signal */\n        else if (t <= 380) PORTBbits.RB0 = 0;  /* 2 °C gisterezis */\n\n        __delay_ms(500);\n    }\n}"],
+  ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
+  ["c","__CONFIG(_HS_OSC & _WDT_OFF & _LVP_OFF);\n\n/* LCD va ADC: oldingi ishdagi sbit e'lonlari, ADC_Init va Lcd_* funksiyalari */\nunsigned int harorat_olish()          /* natija 0,1 °C birliklarida */\n{\n    unsigned long s = 0;\n    unsigned short i;\n    for (i = 0; i < 16; i++) { s += ADC_Read(0); Delay_ms(2); }\n    s >>= 4;                                   /* 16 ta o'lchashning o'rtachasi */\n    return (unsigned int)(s * 4890UL / 1000UL);   /* kod -> 0,1 °C (LM35: 10 mV/°C) */\n}\n\nvoid main()\n{\n    unsigned int t;\n\n    ADC_Init();\n    TRISB = 0x00;\n    Lcd_Init();\n    Lcd_Cmd(_LCD_CLEAR);\n    Lcd_Cmd(_LCD_CURSOR_OFF);\n    Lcd_Out(1, 1, \"Harorat:\");\n\n    while (1)\n    {\n        t = harorat_olish();\n\n        Lcd_Chr(2, 1, (t / 100) + '0');\n        Lcd_Chr(2, 2, ((t / 10) % 10) + '0');\n        Lcd_Chr(2, 3, '.');\n        Lcd_Chr(2, 4, (t % 10) + '0');\n        Lcd_Chr(2, 5, ' ');\n        Lcd_Chr(2, 6, 0xDF);            /* daraja belgisi */\n        Lcd_Chr(2, 7, 'C');\n\n        if (t >= 400)      PORTB.F0 = 1;   /* 40,0 °C dan yuqori — signal */\n        else if (t <= 380) PORTB.F0 = 0;   /* 2 °C gisterezis */\n\n        Delay_ms(500);\n    }\n}"],
   ["p","Kodda 0,1 °C birliklari ishlatilgani uchun kasr sonlar talab qilinmaydi — butun sonlar bilan ishlash mikrokontrollerda ancha tez va kam xotira oladi. Signalizatsiya chegarasida 2 °C gisterezis qo'llangan, bu chegara atrofida relening tez-tez kalitlanishini oldini oladi."],
   ["h","Kalibrlash"],
   ["ol",["Qurilmani etalon termometr bilan bir xil sharoitga qo'ying va 10 daqiqa barqarorlashtiring.","Ikki nuqtada (masalan xona harorati va muzli suv) ko'rsatkichlarni yozib oling.","Farqni hisoblang: agar u butun diapazonda bir xil bo'lsa — nol siljishi, o'zgarib borsa — koeffitsient xatosi.","Nol siljishini dasturda doimiy tuzatma sifatida hisobga oling.","Koeffitsient xatosini hisoblash formulasidagi ko'paytuvchini o'zgartirib tuzating.","Tuzatmalarni EEPROM ga yozib qo'ying — shunda ular quvvat uzilganda ham saqlanadi."]],
@@ -5322,7 +5335,7 @@ function vSem(sem){
       <span class="ttl"><b>${esc(WEEK_TITLES[sem+"-"+w]||w+"-hafta")}</b><em>${ls.length} mashg'ulot</em></span>
       <span class="pct">${dn}/${ls.length}</span></button>
       <div class="wbody hide" id="w${w}">${ls.map(l=>{ const och=darsOchiq(u.login,l.id);
-        return `<button class="lrow${och?"":" yopiq"}" ${och?`data-l="${l.id}"`:`data-yopiq="1"`}>
+        return `<button class="lrow${och?"":" yopiq"}" data-l="${l.id}">
         <span class="dot ${lessonState(u.login,l.id)}"></span>
         <span class="tag ${TYPE_CL[l.type]}">${TYPE_NM[l.type]} ${l.no}</span>
         <span class="nm">${esc(l.title)}</span>
@@ -5332,28 +5345,27 @@ function vSem(sem){
 function afterSem(){
   $$(".week > button").forEach(b=>b.onclick=()=>$("#w"+b.dataset.w).classList.toggle("hide"));
   $$(".lrow[data-l]").forEach(b=>b.onclick=()=>go("#/lesson/"+b.dataset.l));
-  $$(".lrow[data-yopiq]").forEach(b=>b.onclick=()=>toast("Bu dars hozircha yopiq. O'qituvchi ochgandan keyin ochiladi.",true));
   const f=$(".wbody"); if(f) f.classList.remove("hide");
 }
 
 function vLesson(id){
   const l=byId(id); if(!l) return page(`<div class="card"><div class="empty">Bunday dars topilmadi.</div></div>`);
   const u=me();
-  if(!darsOchiq(u.login,id)) return page(`<div class="card"><h1>Dars yopiq</h1>
-    <p class="sub">${esc(l.title)}</p>
-    <div class="empty">Bu mashg'ulot hozircha yopiq. O'qituvchi uni ochgandan keyin ishlashingiz mumkin.</div></div>`);
+  const och=darsOchiq(u.login,id);
   const p=lp(u.login,id); p.opened++; userData(u.login).lastSeen=nowISO(); save();
   const idx=LESSONS.indexOf(l);
   const extra = l.type==="lecture" ? "" : `
    <h2>Natija va hisobot</h2>
-   <label class="fld"><span>Bajarilgan ish natijasi va xulosangiz</span><textarea id="tasktext" placeholder="Hisoblash natijalari, kuzatishlar, xulosa...">${esc(p.tasks)}</textarea></label>
-   <div class="row"><label class="fld"><span>Ish rasmini yuklash (sxema, ekran tasviri, daftar)</span><input type="file" id="imgup" accept="image/*"></label></div>
+   ${och?"":`<div class="msg warn">Hisobot topshirish hozir yopiq. O'qituvchi darsni ochgandan keyin yuborishingiz mumkin.</div>`}
+   <label class="fld"><span>Bajarilgan ish natijasi va xulosangiz</span><textarea id="tasktext" ${och?"":"disabled"} placeholder="Hisoblash natijalari, kuzatishlar, xulosa...">${esc(p.tasks)}</textarea></label>
+   <div class="row"><label class="fld"><span>Ish rasmini yuklash (sxema, ekran tasviri, daftar)</span><input type="file" id="imgup" accept="image/*" ${och?"":"disabled"}></label></div>
    <div id="imgs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
-   <button class="btn ghost" id="savework">Hisobotni saqlash</button>`;
+   <button class="btn ghost" id="savework" ${och?"":"disabled"}>Hisobotni saqlash</button>`;
   return page(`<article class="lesson">
    <header class="lhead"><div class="meta"><span class="tag ${TYPE_CL[l.type]}">${TYPE_NM[l.type]} ${l.no}</span>
      <span class="tag">${l.sem}-semestr</span><span class="tag">${l.week}-hafta</span></div>
      <h1>${esc(l.title)}</h1></header>
+   ${och?"":`<div class="msg warn">Bu mashg'ulot uchun test hozircha yopiq. Nazariyani istalgan vaqtda o'qishingiz mumkin; test o'qituvchi ochgandan keyin ishlaydi.</div>`}
    <div class="read">
     <h2>Ishning maqsadi</h2><p>${esc(l.goal)}</p>
     ${l.outcomes?`<h2>O'quv natijalari</h2><ul>${l.outcomes.map(o=>`<li>${esc(o)}</li>`).join("")}</ul>`:""}
@@ -5364,10 +5376,11 @@ function vLesson(id){
    </div>
    <div class="card" style="margin-top:20px;background:var(--surface2)">
      <h3 style="margin-top:0">Bilimni tekshirish</h3>
+     ${!och ? `<div class="empty" style="margin:0">Test hozir yopiq. O'qituvchi darsni ochgandan keyin bu yerda test paydo bo'ladi.</div>` : `
      <p class="sub" style="margin-bottom:12px">${p.test?`Natija: <b style="color:var(--ink)">${p.test.score}/${p.test.total}</b> · ${dstr(p.test.date)} · urinishlar: ${p.test.attempts}`:`Savollar bankdan tasodifiy tanlanadi va birma-bir beriladi. Test bir marta topshiriladi, har bir javobdan keyin izoh ko'rsatiladi.`}</p>
      ${(!p.test || qaytaRuxsat(u.login,id))
        ? `<button class="btn" id="totest">${p.test?"Qayta topshirish (ruxsat berilgan)":"Testni boshlash"}</button>`
-       : `<div class="msg ok" style="margin:0">Test topshirilgan. Qayta topshirish uchun o'qituvchi ruxsati kerak.</div>`}
+       : `<div class="msg ok" style="margin:0">Test topshirilgan. Qayta topshirish uchun o'qituvchi ruxsati kerak.</div>`}`}
    </div>
    <div class="pager">
      <button class="btn ghost" id="prev" ${idx===0?"disabled":""}>← Oldingi</button>
@@ -5376,7 +5389,6 @@ function vLesson(id){
 }
 function afterLesson(id){
   const l=byId(id); if(!l) return;
-  if(!darsOchiq(me().login,id)) return;      /* yopiq dars — sahifada tugmalar yo'q */
   mountSims(document);
   const u=me(), p=lp(u.login,id), idx=LESSONS.indexOf(l);
   if($("#totest")) $("#totest").onclick=()=>go("#/test/"+id);
@@ -6384,7 +6396,8 @@ window.addEventListener("hashchange",render);
       }).catch(()=>{});
     };
     setTimeout(yangila, 2000);
-    setInterval(yangila, 120000);
+    /* Server yukini kamaytirish uchun: 5 daqiqada bir, faqat sahifa ochiq bo'lganda */
+    setInterval(()=>{ if(!document.hidden) yangila(); }, 300000);
     window.addEventListener("focus", yangila);
   }
 })();

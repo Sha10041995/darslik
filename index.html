@@ -281,6 +281,15 @@ pre code{background:none; padding:0}
 .modal img{max-width:100%; border-radius:var(--r)}
 .hide{display:none!important}
 @media print{.top,.rail,.mnav,.pager,.btn{display:none!important} .lesson{border:0}}
+
+.seg.seglock{display:none}
+.chk{margin:18px 0;padding:16px;border:1px solid var(--accent);border-radius:var(--r2);background:var(--surface2);font-family:var(--f-ui)}
+.chk.done{border-color:var(--line);padding:8px 14px;color:var(--ink2,inherit)}
+.chkh{font-size:12px;text-transform:uppercase;letter-spacing:.05em;opacity:.7;margin-bottom:6px}
+.chkq{font-weight:600;margin:0 0 10px}
+.chk .opt{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:inherit;font:inherit;cursor:pointer}
+.chk .opt.ok{border-color:#2e9d5b;background:rgba(46,157,91,.12)}
+.chk .opt.bad{border-color:#c0392b;opacity:.6}
 </style>
 </head>
 <body>
@@ -439,6 +448,12 @@ function darsOchiq(login, id) {
 }
 /* testni qayta topshirishga ruxsat — bitta talaba, bitta dars uchun */
 function qaytaRuxsat(login, id) { return (S.access.u[login] || {})["RETRY:" + id] === 1; }
+/* Testlar bahoga ta'sir qiladimi? Administrator yoqadi (CFG:BAHO). O'chiq bo'lsa —
+   mashq rejimi: server deyarli yuklanmaydi, baholanuvchi test QuizUz da o'tkaziladi. */
+const BAHOLI = () => S.access.g["CFG:BAHO"] === 1;
+const QUIZ_URL = "https://quiz-uz-delta.vercel.app/join";
+/* joriy rejimdagi test natijasi: baholi rejimda p.test, mashqda p.mashq */
+const tn = p => p ? (BAHOLI() ? p.test : p.mashq) : null;
 
 function ruxsatBer(id, holat, login) {
   if (login) { (S.access.u[login] = S.access.u[login] || {})[id] = holat ? 1 : 0; }
@@ -1321,7 +1336,8 @@ const LESSONS = [
   {q:"Xotiraga o'rtacha murojaat vaqti qanday formula bilan hisoblanadi?",o:["t = p · t_xotira + (1 − p) · t_kesh ko'rinishida hisoblanadi","t = p · t_kesh + (1 − p) · t_xotira ko'rinishida hisoblanadi","t = (t_kesh + t_xotira) / 2 ko'rinishida o'rtacha olinadi","t = t_kesh · t_xotira · p ko'rinishida ko'paytma sifatida"]},
   {q:"t_kesh = 2 takt, t_xotira = 100 takt, p = 0,95 bo'lsa o'rtacha murojaat vaqti qancha?",o:["100 takt — keshning ta'siri hisobga olinmagan holda","51 takt — ikki qiymatning oddiy o'rtachasi sifatida","6,9 takt — 0,95·2 + 0,05·100 hisobidan kelib chiqadi","2 takt — barcha murojaatlar keshdan topilgani uchun"]},
   {q:"Oddiy mikrokontrollerlarda kesh nima uchun qo'yilmaydi?",o:["Ichki Flash va SRAM yadro bilan bir xil tezlikda ishlagani uchun","Mikrokontrollerlar dastur bilan umuman ishlamagani uchun","Ta'minot quvvati kesh uchun yetarli bo'lmagani uchun","Kristallda unga joy yetmagani va narxi qimmatligi uchun"]},
- ]
+ ],
+ checks:[{at:9,q:"Mikrokontrollerning (MK) asosiy belgisi qaysi?",o:["Faqat kiritish-chiqarish portlaridan iborat sxema va kvarts","Xotirasiz ishlab, tashqi shinaga tayanuvchi yadro va alohida port","Yadro, xotira va periferiya bitta kristallda birlashgan","Faqat arifmetik amallarni bajaruvchi alohida kristall va tashqi xotira"],a:2,e:"MK — yadro, xotira va periferiya bitta kristallda birlashtirilgan tugallangan tizim."},{at:13,q:"Xotira devori (memory wall) deb nima ataladi?",o:["Kesh-xotira to'lib qolishi natijasidagi uzoq to'xtash holati","Xotira hajmining adres fazosidan oshib ketishi natijasidagi xato","Protsessor va operativ xotira tezligi orasidagi katta farq","Xotira yacheykalarini himoyalovchi apparat to'siq va parol"],a:2,e:"Protsessor nanosekundlarda, operativ xotira esa o'nlab nanosekundda ishlaydi."},{at:17,q:"Fazo bo'yicha lokallik nimani anglatadi?",o:["Yaqinda ishlatilgan ma'lumot yaqin kelajakda yana kerak bo'ladi, shuning uchun saqlanadi","Bitta yacheykaga murojaatdan keyin qo'shnilari ham tez kerak bo'ladi","Dastur buyruqlari xotirada faqat ketma-ket tartibda joylashtiriladi","Ma'lumot faqat bitta xotira darajasida saqlanishi shart bo'ladi, boshqasida emas"],a:1,e:"Shu sababli keshga bitta bayt emas, butun blok (kesh qatori) ko'chiriladi."},{at:23,q:"t_kesh = 2 takt, t_xotira = 100 takt, p = 0,95 bo'lsa, o'rtacha murojaat vaqti qancha?",o:["9,5 takt","5,0 takt","2,0 takt","6,9 takt"],a:3,e:"t = 0,95·2 + 0,05·100 = 6,9 takt."}]
 },
 {
  id:"S1-A1", sem:1, week:1, type:"practice", no:1,
@@ -1386,7 +1402,8 @@ const LESSONS = [
   {q:"Blok-sxema chizishning asosiy amaliy foydasi nimada?",o:["Mantiqiy xatolarni kod yozishdan oldin aniqlab olishda","Dastur kodining hajmini sezilarli qisqartirish imkonida","Xotira yacheykalarini tejab ishlatish imkoniyatida","Protsessorning takt chastotasini oshirish imkoniyatida"]},
   {q:"Dastur kodi usuli boshqa tasvirlash usullaridan nimasi bilan ajralib turadi?",o:["Tilning rasmiy sintaksisiga bo'ysunadi va bevosita bajariladi","Shartli yozuv bo'lib, kompilyatorga uzatilmaydi","Oddiy jumlalar bilan yozilib, texnik topshiriqqa kiradi","Grafik belgilardan iborat bo'lib, hujjatlarda ishlatiladi"]},
   {q:"Murakkab mikrokontroller dasturi qanday tuzilmalardan tashkil topadi?",o:["Faqat cheksiz sikldan, shart tekshirish esa talab etilmaydi","Chiziqli, tarmoqlanuvchi va takrorlanuvchi tuzilmalar birikmasidan","Faqat qism dasturlardan, asosiy sikl esa bo'lmaydi","Faqat chiziqli ketma-ketlikdan, boshqa tuzilma kerak emas"]},
- ]
+ ],
+ checks:[{at:4,q:"Mikrokontroller dasturida asosiy sikl nima uchun ataylab cheksiz qilinadi?",o:["Cheksiz sikl dastur hajmini sezilarli kamaytirib, tezlikni oshiradi","Cheklangan sikl taymerni ishdan chiqarib, kristallni qizdirib qo'yadi","Kompilyator cheklangan sikllarni qabul qilmaydi va xato chiqaradi","Qurilma quvvat berilgan vaqtning barchasida ishlashi kerak"],a:3,e:"Natijaviylik xossasi butun dasturga emas, uning ichki qismlariga qo'llanadi."},{at:9,q:"Quyidagilardan qaysi biri takrorlanuvchi tuzilma (sikl) misoli?",o:["Portni sozlash va boshlang'ich qiymat berish","Takrorlanadigan amallarni alohida funksiyaga ajratish","Tugma bosilganmi yoki yo'qmi tekshirish","8 ta LED ni navbat bilan yoqish"],a:3,e:"Sikl — shart bajarilguncha amallar guruhining qayta bajarilishi."},{at:15,q:"1 dan N gacha sonlar yig'indisi qaysi formula bilan tekshiriladi?",o:["S = (N + 1)² / 2","S = N · (N + 1) / 2","S = N² / 2 + 1","S = N · (N − 1) / 2"],a:1,e:"N = 10 uchun S = 55 bo'lishi kerak."}]
 },
 {
  id:"S1-M2", sem:1, week:2, type:"lecture", no:2,
@@ -1447,7 +1464,8 @@ const LESSONS = [
   {q:"Elbrus protsessorlari qaysi arxitekturaga asoslangan?",o:["RISC arxitekturasiga, qisqartirilgan buyruqlar to'plamiga","Garvard arxitekturasiga, xotiralar ajratilgan holatga","CISC arxitekturasiga, murakkab buyruqlar to'plamiga","VLIW arxitekturasiga, parallellikni kompilyator rejalashtiradi"]},
   {q:"ARM kompaniyasining biznes modeli nimaga asoslangan?",o:["Xotira mikrosxemalari ishlab chiqarib bozorga chiqarishga","Arxitektura litsenziyasini boshqa kompaniyalarga sotishga","Faqat tayyor dasturiy ta'minotni sotish hisobiga ishlashga","O'z zavodlarida kristall ishlab chiqarib sotishga asoslangan"]},
   {q:"O'rnatilgan tizimlarda protsessor tanlashda hal qiluvchi mezon nima?",o:["Faqat kristalldagi tranzistorlarning umumiy soni olinadi","Faqat eng yuqori takt chastotasi hal qiluvchi mezon bo'ladi","Quvvat birligiga unumdorlik va kerakli periferiya tarkibi","Faqat kesh hajmi va xotira shinasining kengligi hisoblanadi"]},
- ]
+ ],
+ checks:[{at:4,q:"Mur qonuniga ko'ra tranzistorlar soni taxminan qancha vaqtda ikki barobar ortadi?",o:["Har ikki yilda","Har yili","Har besh yilda","Har o'n yilda"],a:0,e:"Mur qonuni fizik qonun emas, balki empirik kuzatuv."},{at:8,q:"Nima uchun chastotani oshirish o'rniga yadrolar soni oshirila boshlandi?",o:["Dasturlar bitta yadroda ishlashni qat'iy taqiqlagani uchun","Ko'p yadroli kristallar arzonroq ishlab chiqarilgani va soddaroq bo'lgani uchun","Kvarts rezonatorlar yuqori chastotani umuman ushlay olmagani uchun","Quvvat sarfi chastotaga proporsional, issiqlik chegarasiga urildi"],a:3,e:"P ≈ C·U²·f: chastota 3–4 GHz atrofida issiqlik chegarasiga yetdi."},{at:12,q:"Dasturning 10 % i ketma-ket bajarilsa, Amdal qonuniga ko'ra tezlanish nima bilan cheklanadi?",o:["10 barobardan oshmaydi","5 barobardan oshmaydi","100 barobargacha o'sadi","Yadrolar soniga teng bo'ladi"],a:0,e:"Ketma-ket qism tezlashtirishga bo'ysunmaydi."},{at:15,q:"Elbrus protsessori qaysi arxitekturaga asoslangan?",o:["VLIW (keng buyruqli) arxitekturaga","8 razryadli Garvard MK arxitekturasiga","Superskalyar x86 arxitekturaga","ARM litsenziyali arxitekturaga"],a:0,e:"VLIW da parallellikni kompilyator rejalashtiradi."}]
 },
 {
  id:"S1-A2", sem:1, week:2, type:"practice", no:2,
@@ -1470,7 +1488,7 @@ const LESSONS = [
   ["f","t = N · T_sikl","N ta bir sikli buyruq bajarilish vaqti — dasturiy kechikishlarni hisoblash asosi."],
   ["p","Misol. PIC16F877A, f = 4 MHz. Mashina sikli 1 µs. 1 ms kechikish uchun taxminan 1000 ta bir sikli buyruq kerak; bu odatda ichma-ich joylashgan ikki sikl bilan amalga oshiriladi."],
   ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
-  ["c","/* mikroC PRO for PIC: konfiguratsiya va kechikish */\n%s\n\nvoid main()\n{\n    TRISB = 0x00;             // PORTB chiqish\n    while (1)\n    {\n        PORTB = 0xFF;\n        Delay_ms(500);        // 500 ms\n        PORTB = 0x00;\n        Delay_ms(500);\n    }\n}"],
+  ["c","/* mikroC PRO for PIC: konfiguratsiya va kechikish */\n__CONFIG(_HS_OSC & _WDT_OFF & _PWRTE_ON & _BODEN_ON & _LVP_OFF & _CP_OFF & _WRT_OFF & _CPD_OFF);\n\nvoid main()\n{\n    TRISB = 0x00;             // PORTB chiqish\n    while (1)\n    {\n        PORTB = 0xFF;\n        Delay_ms(500);        // 500 ms\n        PORTB = 0x00;\n        Delay_ms(500);\n    }\n}"],
   ["p","Konfiguratsiya so'zidagi FOSC bitlari generator rejimini tanlaydi: LP — past chastotali kvarts (32 kHz), XT — o'rtacha (1–4 MHz), HS — yuqori chastotali (4–20 MHz), RC — tashqi RC zanjir, INTOSC — ichki generator. Noto'g'ri rejim tanlansa, mikrokontroller umuman ishga tushmaydi — bu boshlovchilar duch keladigan eng ko'p tarqalgan xato."],
   ["h","Interaktiv qism"],
   ["p","Taymer simulyatorida chastota va bo'luvchini o'zgartirib, to'lib ketish davri qanday hisoblanishini kuzating."],
@@ -1511,7 +1529,8 @@ const LESSONS = [
   {q:"Konfiguratsiyada noto'g'ri generator rejimi tanlansa nima sodir bo'ladi?",o:["Dastur xotirasidagi ma'lumot butunlay o'chib ketadi","Faqat kiritish-chiqarish portlari ishlamay qoladi","Dastur sekinlashadi, lekin ishlashda davom etadi","Mikrokontroller umuman ishga tushmaydi, dastur bajarilmaydi"]},
   {q:"Ketma-ket aloqa (UART) uchun qaysi generator afzal ko'riladi?",o:["Ichki RC generator, chunki tashqi element kerak emas","Kvarts rezonator, chunki bod tezligi xatosi kichik bo'ladi","Tashqi RC zanjir, chunki arzon va sozlash oson bo'ladi","Har qanday generator, chunki UART chastotaga bog'liq emas"]},
   {q:"Takt chastotasini ikki barobar oshirsak, taymerning to'lib ketish davri qanday o'zgaradi?",o:["To'rt barobar uzayadi, chunki sikl to'rt taktdan iborat","O'zgarmaydi, chunki davr faqat bo'luvchiga bog'liq","Ikki barobar uzayadi, chunki hisoblash sekinlashadi","Ikki barobar qisqaradi, chunki takt davri qisqaradi"]},
- ]
+ ],
+ checks:[{at:3,q:"Quyidagilardan qaysi takt generatori eng yuqori aniqlikka ega?",o:["Tashqi RC zanjir (±5–10 % gacha aniqlikda)","Kvarts rezonator (±0,001 % gacha)","Keramik rezonator (±0,5 % gacha aniqlikda)","Ichki RC generator (±1–2 % gacha aniqlikda)"],a:1,e:"Shu sababli UART va soat uchun kvarts tanlanadi."},{at:6,q:"Kvarts rezonator OSC1 va OSC2 chiqishlariga qanday ulanadi?",o:["Har bir chiqish 10 kΩ rezistor orqali +5 V manbaga","Har bir chiqish 15–22 pF kondensator orqali umumiy simga","Chiqishlar o'zaro to'g'ridan-to'g'ri qisqa tutashtiriladi","OSC2 chiqishi to'g'ridan-to'g'ri MCLR liniyasiga ulanadi"],a:1,e:"Kondensator qiymati rezonator hujjatidagi yuk sig'imiga qarab tanlanadi."},{at:11,q:"f = 8 MHz bo'lsa, PIC mashina sikli necha nanosekund davom etadi?",o:["500 ns","2000 ns","250 ns","125 ns"],a:0,e:"T_sikl = 4 / f_osc = 4 / 8 MHz = 500 ns."},{at:14,q:"Noto'g'ri generator rejimi (FOSC) tanlansa nima bo'ladi?",o:["Dastur sekinroq, lekin to'g'ri ishlaydi","Mikrokontroller umuman ishga tushmaydi","Watchdog rejimni avtomatik tuzatadi","Faqat taymerlar ishlamay qoladi"],a:1,e:"Bu boshlovchilar duch keladigan eng ko'p tarqalgan xato."}]
 },
 {
  id:"S1-M3", sem:1, week:3, type:"lecture", no:3,
@@ -1578,7 +1597,8 @@ const LESSONS = [
   {q:"CMOS tizimda chastotani ikki barobar oshirish quvvat sarfiga qanday ta'sir qiladi?",o:["Quvvat sarfini to'rt barobar kamaytirib yuboradi","Quvvat sarfini ikki barobar kamaytirib yuboradi","Quvvat sarfini taxminan ikki barobar oshirib yuboradi","Quvvat sarfini o'zgartirmaydi, chunki kuchlanish o'sha qoladi"]},
   {q:"Tizim tanlashda hal qiluvchi mezon nima bo'lishi kerak?",o:["Faqat ishlab chiqaruvchi kompaniyaning nomi va narxi","Faqat kristalldagi tranzistorlar soni va kesh hajmi","Vazifaga yetarli unumdorlik, periferiya tarkibi, quvvat byudjeti","Faqat eng yuqori takt chastotasi hal qiluvchi bo'ladi"]},
   {q:"Tibbiy elektronikada mikroprotsessorli tizimlar qanday qo'llanadi?",o:["Chastota o'zgartkichlari va sanoat kontrollerlarida","Puls oksimetr, EKG registratori, infuzion nasoslarda","Termostat, hisoblagich va aqlli datchiklar tarkibida","Dvigatel boshqaruv bloki va ko'rsatkichlar panelida"]},
- ]
+ ],
+ checks:[{at:5,q:"Doimiy xotira (ROM, Flash) da nima saqlanadi?",o:["Kiritish qurilmalarining joriy holati","O'zgaruvchilar va oraliq natijalar","Dastur kodi va o'zgarmas jadvallar","Stek va uzilish so'rovlari"],a:2,e:"Doimiy xotira quvvat uzilganda ma'lumotni yo'qotmaydi."},{at:10,q:"Adres shinasi 16 razryadli bo'lsa, nechta yacheykani adreslash mumkin?",o:["65 536 (64 K)","1 048 576 (1 M)","16 384 (16 K)","32 768 (32 K)"],a:0,e:"M = 2^n = 2^16 = 65 536."},{at:12,q:"Boshqarish usuliga ko'ra tizimlar qanday turlarga bo'linadi?",o:["Bir kristalli, bir plataly va modulli tizimlar","Universal, ixtisoslashgan va aralash tizimlar","4, 8, 16, 32 va 64 razryadli tizimlar","Dasturiy so'rov, uzilishli va DMA bilan"],a:3,e:"Boshqa belgilar: vazifasi, razryadliligi, tuzilishi, ish rejimi."},{at:18,q:"20 MHz kvarts va 4 taktli mashina siklida PIC16F877A sekundiga nechta oddiy buyruq bajaradi?",o:["50 million","20 million","5 million","2,5 million"],a:2,e:"Mashina sikli 200 ns, demak 1 s / 200 ns = 5 million."}]
 },
 {
  id:"S1-A3", sem:1, week:3, type:"practice", no:3,
@@ -1602,14 +1622,14 @@ const LESSONS = [
   ["p","Jadvalda A = 5, B = 13 uchun hisob keltirilgan: natija 65 ga teng, ya'ni 5 · 13 = 65."],
   ["h","To'liq dastur"],
   ["c","__CONFIG(_HS_OSC & _WDT_OFF & _PWRTE_ON & _BODEN_ON & _LVP_OFF & _CP_OFF & _WRT_OFF & _CPD_OFF);\n\nunsigned int mul_shift(unsigned short a, unsigned short b);\n\nvoid main()\n{\n    unsigned short a = 25, b = 17;\n    unsigned int p;\n\n    TRISB = 0x00;            // PORTB — natijaning quyi bayti\n    TRISD = 0x00;            // PORTD — yuqori bayt\n\n    p = mul_shift(a, b);     // 25 * 17 = 425 = 0x01A9\n\n    while (1)\n    {\n        PORTB = (unsigned short)(p & 0x00FF);   // 0xA9\n        PORTD = (unsigned short)(p >> 8);       // 0x01\n    }\n}"],
-  ["n","Diqqat: natijani uint8_t o'zgaruvchiga yozsangiz, yuqori bayt yo'qoladi va 425 o'rniga 169 hosil bo'ladi. Oraliq hisoblarda ham (uint16_t) turiga keltirish shart."],
+  ["n","Diqqat: natijani 8 razryadli unsigned short o'zgaruvchiga yozsangiz, yuqori bayt yo'qoladi va 425 o'rniga 169 hosil bo'ladi. Natija uchun 16 razryadli unsigned int turi tanlanadi."],
   ["h","Usullarni taqqoslash"],
   ["t",["Usul","Qadamlar soni","f = 8 MHz da taxminiy vaqt","Kod hajmi"],[["Takrorlangan qo'shish","B ga teng (1–255)","2–500 µs","kichik"],["Siljitish va qo'shish","har doim 8","8–12 µs","o'rtacha"],["Jadvalli (kichik diapazon uchun)","1","1 µs dan kam","katta (xotira sarfi)"]]],
   ["h","Interaktiv qism"],
   ["p","ALU simulyatorida SHL amalini bajarib, chapga siljitish sonni 2 ga ko'paytirishini va C bayrog'iga chiqib ketgan bitni kuzating."],
   ["sim","alu"],
   ["h","Topshiriqlar"],
-  ["ol",["Variant raqamingiz N bo'lsin. A = 20 + N, B = 12 + N sonlarini siljitish usuli bilan qo'lda ko'paytiring va jadval tuzing.","mul_shift funksiyasini kompilyatorda tekshiring va natijani qo'lda hisobingiz bilan solishtiring.","Ikki usulning qadamlar sonini B = 3 va B = 200 uchun taqqoslang, xulosa yozing.","Natijani ikkita portga bayt-bayt chiqaruvchi dastur qismini yozing.","Ko'paytirishni 2 ning darajasiga (2, 4, 8) siljitish bilan almashtirish mumkinligini kod bilan ko'rsating.","Kod va natija ekranining rasmini yuklang."]],
+  ["ol",["Variant raqamingiz N bo'lsin. A = 20 + N, B = 12 + N sonlarini siljitish usuli bilan qo'lda ko'paytiring va jadval tuzing.","mul_shift funksiyasini mikroC PRO for PIC kompilyatorida tekshiring va natijani qo'lda hisobingiz bilan solishtiring.","Ikki usulning qadamlar sonini B = 3 va B = 200 uchun taqqoslang, xulosa yozing.","Natijani ikkita portga bayt-bayt chiqaruvchi dastur qismini yozing.","Ko'paytirishni 2 ning darajasiga (2, 4, 8) siljitish bilan almashtirish mumkinligini kod bilan ko'rsating.","Kod va natija ekranining rasmini yuklang."]],
   ["h","Xulosa"],
   ["p","Apparat ko'paytirgichi bo'lmagan mikrokontrollerda ko'paytirish dasturiy amalga oshiriladi. Takrorlangan qo'shish sodda, lekin bajarilish vaqti operandga bog'liq; siljitish va qo'shish usuli esa har doim sakkiz qadamda tugaydi va real vaqt tizimlari uchun afzal. Natija razryadliligini to'g'ri tanlash — bu masalada eng ko'p uchraydigan xatoning oldini oladi."],
  ],
@@ -1644,7 +1664,8 @@ const LESSONS = [
   {q:"Sonni 8 ga ko'paytirishning eng tez usuli qaysi?",o:["Ikkiga ketma-ket uch marta bo'lish usuli","Sakkiz marta ketma-ket qo'shib chiqish usuli","Tayyor jadvaldan natijani o'qib olish usuli","Uch razryad chapga siljitish, chunki 8 = 2³ bo'ladi"]},
   {q:"ALU simulyatorida SHL amalini bajarganda nimani kuzatish mumkin?",o:["Sonning barcha bitlari inversiyalanadi va N o'rnatiladi","Son 2 ga ko'payadi va chiqib ketgan bit C bayrog'iga tushadi","Son 2 ga bo'linadi va qoldiq Z bayrog'ida saqlanadi","Son o'zgarmaydi, faqat bayroqlar qiymati almashadi"]},
   {q:"Natija razryadliligini to'g'ri tanlash nima uchun muhim?",o:["Kod hajmini minimal darajaga tushirish uchun muhimdir","Simulyatorda sxemani chizishni osonlashtirgani uchun","Bu masalada eng ko'p uchraydigan xatoning oldini oladi","Takt chastotasini oshirish imkonini berishi uchun muhim"]},
- ]
+ ],
+ checks:[{at:2,q:"Ikki 8 razryadli son ko'paytmasi uchun natijaga nechta bayt ajratiladi?",o:["To'rtta bayt (32 razryad)","Uchta bayt (24 razryad)","Ikkita bayt (16 razryad)","Bitta bayt (8 razryad)"],a:2,e:"Eng katta ko'paytma 255 · 255 = 65 025."},{at:4,q:"Takrorlangan qo'shish usulining kamchiligi nimada?",o:["Apparat ko'paytirgich bo'lishini talab qiladi, aks holda ishlamaydi","Natija har doim 8 razryadga sig'maydi va C bayrog'i to'lib ketadi","B katta bo'lsa sekin: 255 tagacha qo'shish bajariladi","Faqat toq sonlar uchun ishlaydi, juft sonlarda xato beradi"],a:2,e:"Bajarilish vaqti B ga bog'liq."},{at:11,q:"Siljitish va qo'shish usulida 8 razryadli sonlar uchun nechta qadam bajariladi?",o:["Har doim 16 ta","B ga teng sondagi","A va B yig'indisiga teng sondagi","Har doim 8 ta"],a:3,e:"Har bir qadamda ko'paytuvchining bitta biti tekshiriladi."},{at:14,q:"Natija 8 razryadli o'zgaruvchiga yozilsa, 25 · 17 = 425 o'rniga nima hosil bo'ladi?",o:["169","85","255","425"],a:0,e:"Yuqori bayt yo'qoladi: 425 − 256 = 169."}]
 },
 {
  id:"S1-M4", sem:1, week:4, type:"lecture", no:4,
@@ -1707,7 +1728,8 @@ const LESSONS = [
   {q:"Boshqaruv signallari shakllangandan keyin ular qayerga yuboriladi?",o:["Faqat doimiy xotiraga yuborilib, dastur o'qiladi","Registrlar, ALU va shina buferlariga yuboriladi","Faqat tashqi interfeys tugunlariga yuborib beriladi","Faqat buyruqlar hisoblagichiga yuborilib, uni orttiradi"]},
   {q:"Buyruq bajarilib bo'lgandan keyin nima sodir bo'ladi?",o:["Protsessor to'xtab, tashqi signalni kutib qoladi","Buyruq registri xotiraga qayta yozib qo'yiladi","Buyruqlar hisoblagichi (PC) orttiriladi va sikl takrorlanadi","Bayroqlar registri butunlay nollanib qo'yiladi"]},
   {q:"Operatsiya kodi razryadini kengaytirish nimaga olib keladi?",o:["Buyruqlar soni ham, operand razryadi ham birga ortadi","Takt chastotasi ortadi va unumdorlik ko'tariladi","Buyruqlar soni ortadi, lekin operand uchun razryad kamayadi","Hech qanday o'zgarish bo'lmaydi, format saqlanadi"]},
- ]
+ ],
+ checks:[{at:6,q:"Umumiy shinali tizimning asosiy kamchiligi nima?",o:["Narxi taqsimlangan shinali tizimdan yuqori bo'ladi","Shina tor joyga aylanib, unumdorlik pasayadi","Yangi qurilma qo'shish juda murakkab bo'ladi","Har bir guruh uchun alohida shina kerak bo'ladi"],a:1,e:"Qurilmalar ko'payganda kutish vaqti o'sadi."},{at:10,q:"Buyruqlar registri bloki chiqargan ikki oqim qayerga yo'naltiriladi?",o:["Operatsiya kodi ma'lumotlar yo'liga, operand boshqaruv qurilmasiga","Ikkalasi ham to'g'ridan-to'g'ri ALU ga","Operatsiya kodi boshqaruv qurilmasiga, operand ma'lumotlar yo'liga","Ikkalasi ham to'g'ridan-to'g'ri operativ xotiraga"],a:2,e:"Shu ajratish tufayli bitta buyruq kodi butun protsessor ishini belgilaydi."},{at:15,q:"6 razryadli operatsiya kodi nechta xil buyruqni ajratish imkonini beradi?",o:["64 ta","32 ta","36 ta","128 ta"],a:0,e:"Chiqishlar soni = 2^n = 2^6 = 64."},{at:17,q:"Deshifrator chiqishi nima bilan birlashtirilib, signallar ketma-ketligi hosil qilinadi?",o:["Stek ko'rsatkichi bilan hisoblagich orqali","Adres shinasi signallari bilan VAYOKI sxemasi orqali","Holat registri bayroqlari bilan multiplekser orqali","Takt fazalari bilan mantiqiy VA sxemalari orqali"],a:3,e:"Shunda har bir signal o'z taktida hosil bo'ladi."}]
 },
 {
  id:"S1-A4", sem:1, week:4, type:"practice", no:4,
@@ -1768,7 +1790,8 @@ const LESSONS = [
   {q:"Kompilyatsiya natijasi qaysi papkada hosil bo'ladi?",o:["Loyiha ildiz papkasida, .mcp fayl ko'rinishida chiqadi","Source Files papkasida, .c fayl ko'rinishida saqlanadi","Header Files papkasida, .h fayl ko'rinishida chiqadi","dist papkasida, .hex fayl ko'rinishida hosil bo'ladi"]},
   {q:"Rezistor qiymatini 330 Ω dan 1 kΩ ga oshirsak, LED toki qanday o'zgaradi?",o:["Taxminan uch barobar kamayadi, chunki qarshilik ortadi","O'zgarmaydi, chunki tok faqat kuchlanishga bog'liq","Nolga tushadi, chunki zanjir butunlay uzilib qoladi","Taxminan uch barobar ortadi, chunki qarshilik ortadi"]},
   {q:"Modellashtirish natijasi nazariy hisobga mos kelmasa, bu nimani ko'rsatadi?",o:["Sxemada yoki dasturda xato borligini ko'rsatib beradi","Nazariy hisob hech qachon amaliyotga mos kelmasligini","Kristall jismoniy nuqsonli ekanini bevosita ko'rsatadi","Proteusning o'zi noto'g'ri ishlab turganini ko'rsatadi"]},
- ]
+ ],
+ checks:[{at:3,q:"Proteusning ISIS va ARES qismlari qanday vazifa bajaradi?",o:["ISIS sxema va modellashtirish, ARES bosma plata loyihalash","ISIS bosma plata loyihalash, ARES sxema va modellashtirish","ISIS faqat dastur yozish, ARES faqat HEX yuklash","ISIS virtual asboblar, ARES mikrokontroller kutubxonasi"],a:0,e:"VSM moduli mikrokontrollerni real dastur kodi bilan modellashtiradi."},{at:6,q:"Mikrokontroller xossalarida Program File maydoniga nima ko'rsatiladi?",o:["Sxema loyiha fayli (.dsn kengaytmali)","Manba C kodi fayli (.c kengaytmali matn)","Konfiguratsiya bitlari jadvali va fayl nomi","Kompilyatordan olingan HEX fayl"],a:3,e:"Processor Clock Frequency ham 8 MHz qilib belgilanadi."},{at:11,q:"Signalning impuls davri va davomiyligini ko'rish uchun qaysi virtual asbob kerak?",o:["OSCILLOSCOPE","DC AMMETER","VIRTUAL TERMINAL","COUNTER TIMER"],a:0,e:"Ossillograf signal shaklini vaqt bo'yicha ko'rsatadi."}]
 },
 {
  id:"S1-M5", sem:1, week:5, type:"lecture", no:5,
@@ -1837,7 +1860,8 @@ const LESSONS = [
   {q:"Mikrokontrollerlarda xotira ierarxiyasi qanday ko'rinishda bo'ladi?",o:["To'liq: registrlar, kesh, RAM, ROM va tashqi tashuvchilar","Faqat ikki daraja — kesh va tashqi disk bo'ladi","Faqat bitta daraja — operativ xotira mavjud bo'ladi","Qisqa: registrlar, SRAM va Flash darajalari bo'ladi"]},
   {q:"Yo'nalish registri (TRIS) qanday vazifani bajaradi?",o:["Har bir liniyaning kirish yoki chiqish ekanini belgilaydi","Uzatiladigan yoki qabul qilingan baytni saqlab turadi","Ish rejimi, tezlik va uzilish ruxsatini belgilab beradi","Tayyorlik va xatolik bayroqlarini shakllantirib beradi"]},
   {q:"PIC va AVR mikrokontrollerlarida kiritish-chiqarish qanday adreslanadi?",o:["Ajratilgan adres fazosida — maxsus IN/OUT buyruqlari bilan","Faqat tashqi shina kontrolleri orqali adreslanadi","Xotiraga proyeksiyalangan usulda — umumiy adres fazosida","Faqat uzilish vektorlari orqali adreslanib boriladi"]},
- ]
+ ],
+ checks:[{at:6,q:"Mikrodasturiy boshqaruvning qattiq mantiqli boshqaruvdan afzalligi nima?",o:["Alohida boshqaruv xotirasi talab qilinmaydi va narxi pasayadi","Sxema soddalashib, tranzistorlar soni sezilarli kamayadi","Buyruqlar tizimini mikrodasturni almashtirib o'zgartirish mumkin","Buyruqlarni bajarish tezligi qattiq mantiqqa nisbatan yuqoriroq bo'ladi"],a:2,e:"Qattiq mantiq tezroq, lekin uni o'zgartirish uchun kristallni qayta loyihalash kerak."},{at:10,q:"n ta triggerdan iborat hisoblagich qaysi oraliqda sanaydi?",o:["0 dan n − 1 gacha sanaydi, so'ng qaytadan noldan","0 dan 2^n − 1 gacha, so'ng qaytadan noldan","1 dan 2^n gacha sanaydi, so'ng sanashni to'xtatadi","0 dan 2n − 1 gacha sanaydi, so'ng sanashni to'xtatadi"],a:1,e:"To'lib ketgach hisoblagich noldan boshlaydi."},{at:14,q:"Flash xotira uchun odatda nechta yozish sikli kafolatlanadi?",o:["Cheksiz, cheklov yo'q","1 000 000 gacha marta","1 000 – 5 000 marta","10 000 – 100 000"],a:3,e:"EEPROM uchun 1 000 000 gacha sikl kafolatlanadi."},{at:22,q:"PIC va AVR kiritish-chiqarishni qaysi usulda adreslaydi?",o:["Faqat DMA orqali to'g'ridan-to'g'ri almashinuvda","Ajratilgan adres fazosi (isolated I/O) usulida","Xotiraga proyeksiyalangan (memory-mapped) usulda","Faqat uzilishli kiritish-chiqarish usulida"],a:2,e:"x86 ajratilgan adres fazosidan foydalanadi (IN/OUT buyruqlari)."}]
 },
 {
  id:"S1-A5", sem:1, week:5, type:"practice", no:5,
@@ -1851,18 +1875,18 @@ const LESSONS = [
   ["p","PIC uchun dastur ishlab chiqish quyidagi zanjirdan iborat: masalani qo'yish va algoritm tuzish, C yoki assembler tilida kod yozish, kompilyatsiya, bog'lash (linking), HEX faylni olish, modellashtirishda tekshirish va nihoyat programmator orqali kristallga yozish. Har bir bosqichda xato aniqlanishi mumkin, shuning uchun jarayon iterativ — xato topilsa avvalgi bosqichga qaytiladi."],
   ["fig","proteus","1-rasm. Dastur ishlab chiqish va tekshirish zanjiri"],
   ["h","Loyiha yaratish tartibi"],
-  ["ol",["MPLAB X ni ishga tushiring: File → New Project → Microchip Embedded → Standalone Project.","Device maydonida PIC16F877A ni tanlang.","Tool sifatida Simulator yoki mavjud programmator (PICkit) ni belgilang.","Compiler Toolchain da XC8 ni tanlang.","Loyihaga nom bering; nomda bo'sh joy va kirill harflari bo'lmasin.","Source Files papkasiga o'ng tugma → New → main.c faylini qo'shing.","Kodni yozing va F11 (Build) bilan kompilyatsiya qiling.","Natijada dist papkasida .hex fayl hosil bo'ladi — u modellashtirish va programmator uchun ishlatiladi."]],
+  ["ol",["mikroC PRO for PIC ni ishga tushiring: Project → New Project orqali yangi loyiha ustasini oching.","Device Name maydonida PIC16F877A ni tanlang.","Device Clock maydoniga kvarts chastotasini kiriting: 8.000000 MHz.","Loyihaga nom bering va papkasini tanlang; nomda bo'sh joy va kirill harflari bo'lmasin.","Kerakli kutubxonalarni (ADC, LCD) Library Manager orqali yoqing.","Kod oynasiga dasturni yozing va Build (Ctrl+F9) bilan kompilyatsiya qiling.","Konfiguratsiya bitlari Project → Edit Project oynasida yoki dasturdagi __CONFIG qatorida belgilanadi.","Natijada loyiha papkasida .hex fayl hosil bo'ladi — u modellashtirish va programmator uchun ishlatiladi."]],
   ["h","Konfiguratsiya bitlari"],
   ["p","Konfiguratsiya so'zi mikrokontrollerning apparat rejimini belgilaydi va dastur bilan birga kristallga yoziladi. Bu sozlamalar dastur ishga tushishidan oldin amal qiladi, shuning uchun ularni noto'g'ri belgilash kristallning umuman ishlamasligiga olib keladi."],
   ["t",["Bit","Vazifasi","Odatiy qiymat"],[["FOSC","Generator rejimi","HS (4–20 MHz kvarts)"],["WDTE","Watchdog taymer","OFF (o'rganish bosqichida)"],["PWRTE","Quvvat berilgandagi kechikish","ON"],["BOREN","Kuchlanish pasayganda qayta yuklash","ON"],["LVP","Past kuchlanishli dasturlash","OFF (RB3 ni port sifatida ozod qiladi)"],["CP","Kod himoyasi","OFF"]]],
   ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
   ["c","__CONFIG(_HS_OSC & _WDT_OFF & _PWRTE_ON & _BODEN_ON & _LVP_OFF & _CP_OFF & _WRT_OFF & _CPD_OFF);\n\nvoid init_ports()\n{\n    ADCON1 = 0x06;    // PORTA butunlay raqamli\n    TRISB  = 0x00;    // chiqish\n    TRISD  = 0xFF;    // kirish\n    PORTB  = 0x00;\n}\n\nvoid main()\n{\n    init_ports();\n    while (1)\n    {\n        PORTB = 0x0F;\n        Delay_ms(300);\n        PORTB = 0xF0;\n        Delay_ms(300);\n    }\n}"],
   ["h","Tipik xatolar va ularni bartaraf etish"],
-  ["t",["Xato","Sababi","Yechimi"],[["__delay_ms ishlamaydi","_XTAL_FREQ e'lon qilinmagan","#define _XTAL_FREQ ni kvarts chastotasiga teng qo'ying"],["Kristall ishga tushmaydi","FOSC noto'g'ri tanlangan","Generator turiga mos rejimni belgilang"],["RB3 port sifatida ishlamaydi","LVP yoqilgan","LVP = OFF qiling"],["PORTA dan 0 o'qiladi","Liniyalar analog rejimda","ADCON1 = 0x06 bilan raqamli rejimga o'tkazing"],["Dastur bir necha soniyada qayta boshlanadi","Watchdog yoqilgan va tozalanmayapti","WDTE = OFF yoki CLRWDT() ni qo'shing"]]],
+  ["t",["Xato","Sababi","Yechimi"],[["Delay_ms ishlamaydi yoki vaqt noto'g'ri","Loyihada takt chastotasi (Device Clock) noto'g'ri kiritilgan","Project → Edit Project da Device Clock ni kvarts chastotasiga teng qo'ying"],["Kristall ishga tushmaydi","FOSC noto'g'ri tanlangan","Generator turiga mos rejimni belgilang"],["RB3 port sifatida ishlamaydi","LVP yoqilgan","_LVP_OFF ni belgilang"],["PORTA dan 0 o'qiladi","Liniyalar analog rejimda","ADCON1 = 0x06 bilan raqamli rejimga o'tkazing"],["Dastur bir necha soniyada qayta boshlanadi","Watchdog yoqilgan va tozalanmayapti","_WDT_OFF ni belgilang yoki asm CLRWDT buyrug'ini qo'shing"]]],
   ["h","Interaktiv qism"],
   ["sim","port"],
   ["h","Topshiriqlar"],
-  ["ol",["MPLAB X da PIC16F877A uchun loyiha yarating va yuqoridagi dasturni kompilyatsiya qiling.","Variant raqamingiz N bo'lsin: PORTB ga (0x0F + N) va uning inversiyasini navbat bilan chiqaruvchi dastur yozing.","Konfiguratsiya bitlarining har birini o'zgartirib ko'ring va natijani jadvalga yozing.","LVP = ON qilib, RB3 ni port sifatida ishlatishga urinib ko'ring va xulosa yozing.","Hosil bo'lgan HEX faylni Proteusga yuklab, ishlashini tekshiring.","Kompilyatsiya oynasi va modellashtirish natijasining rasmini yuklang."]],
+  ["ol",["mikroC PRO for PIC da PIC16F877A uchun loyiha yarating va yuqoridagi dasturni kompilyatsiya qiling.","Variant raqamingiz N bo'lsin: PORTB ga (0x0F + N) va uning inversiyasini navbat bilan chiqaruvchi dastur yozing.","Konfiguratsiya bitlarining har birini o'zgartirib ko'ring va natijani jadvalga yozing.","LVP = ON qilib, RB3 ni port sifatida ishlatishga urinib ko'ring va xulosa yozing.","Hosil bo'lgan HEX faylni Proteusga yuklab, ishlashini tekshiring.","Kompilyatsiya oynasi va modellashtirish natijasining rasmini yuklang."]],
   ["h","Xulosa"],
   ["p","PIC uchun dastur ishlab chiqish IDE da loyiha yaratish, konfiguratsiya bitlarini to'g'ri belgilash, kod yozish va kompilyatsiyadan iborat. Konfiguratsiya so'zi dasturdan oldin amal qilgani uchun uning xatosi eng ko'p uchraydigan ishga tushmaslik sababi hisoblanadi. Kompilyatsiya natijasi — HEX fayl bo'lib, u ham modellashtirish, ham kristallga yozish uchun yagona manba bo'lib xizmat qiladi."],
  ],
@@ -1897,7 +1921,8 @@ const LESSONS = [
   {q:"HEX fayl qanday maqsadlarda ishlatiladi?",o:["Faqat programmator orqali yozish uchun ishlatiladi","Faqat Proteusda modellashtirish uchun ishlatiladi","Faqat kod hajmini o'lchab ko'rish uchun ishlatiladi","Modellashtirish va kristallga yozish uchun yagona manba"]},
   {q:"Loyihada Tool sifatida nima belgilanishi mumkin?",o:["Faqat XC8 kompilyatori toolchain sifatida belgilanadi","Faqat loyihaning saqlash papkasi belgilab qo'yiladi","Simulator yoki mavjud programmator (PICkit) belgilanadi","Faqat PIC16F877A kristall modeli belgilanadi"]},
   {q:"Konfiguratsiya so'zining xatosi nima uchun eng ko'p uchraydigan muammo?",o:["U HEX faylning nomini o'zgartirib qo'yadi va topilmaydi","U dastur hajmini oshirib, xotiraga sig'masligiga olib keladi","U faqat uzilishlar ishini buzadi, qolgani normal ishlaydi","U dasturdan oldin amal qiladi va kristall ishga tushmaydi"]},
- ]
+ ],
+ checks:[{at:2,q:"Dastur ishlab chiqish jarayoni nima uchun iterativ hisoblanadi?",o:["Kompilyator kodni bir necha marta o'zgartirib, qayta ishlaydi","Har bosqichda xato chiqishi mumkin va avvalgisiga qaytiladi","Dastur har safar avtomatik ravishda qayta yoziladi va kompilyatsiya qilinadi","Kristallga yozish operatsiyasi bir necha marta takrorlanishi shart"],a:1,e:"Xato topilsa, avvalgi bosqichga qaytiladi."},{at:4,q:"mikroC loyihasida Device Clock maydoniga nima kiritiladi?",o:["Mikrokontroller nomi va korpus turi","Mashina sikli davomiyligi nanosekundlarda","Kvarts rezonator chastotasi","Programmator turi va uning porti"],a:2,e:"Delay_ms to'g'ri vaqt berishi shu qiymatga bog'liq."},{at:7,q:"LVP biti o'chirilganda (_LVP_OFF) nima ro'y beradi?",o:["Kod himoyasi avtomatik yoqiladi va kod o'chadi","Watchdog taymer avtomatik yoqiladi","RB3 oddiy port sifatida ishlaydi","Generator ichki RC rejimiga o'tadi"],a:2,e:"LVP = OFF RB3 ni port sifatida ozod qiladi."},{at:11,q:"PORTA dan doim 0 o'qilsa, sabab va yechim qaysi?",o:["Kvarts noto'g'ri tanlangan; FOSC rejimini o'zgartirish kerak","LVP yoqilgan; LVP bitini o'chirish kerak, shundan so'ng ishlaydi","Liniyalar analog rejimda; ADCON1 = 0x06 qo'yiladi","Watchdog yoqilgan; WDT bitini o'chirish kerak"],a:2,e:"PORTA liniyalari boshlang'ich holatda analog kirish bo'ladi."}]
 },
 {
  id:"S1-M6", sem:1, week:6, type:"lecture", no:6,
@@ -1958,7 +1983,8 @@ const LESSONS = [
   {q:"Arifmetik amalning bajarilish zanjiri qanday boshlanadi?",o:["Flaglar registri avval nollanib, keyin amal boshlanadi","Summator darhol natija va o'tkazmani hosil qilib beradi","Boshqaruv qurilmasi birinchi operand registrining buferini ochadi","Natija akkumulyatorga yozilib, bayroqlar yangilanadi"]},
   {q:"Summatorning muhim xususiyati nima?",o:["Xotiraga ega emas — faqat kirishga qarab chiqish beradi","Bayroqlar registrini o'zi mustaqil yangilab turadi","Natijani o'zida saqlab, keyingi amalga uzatib beradi","Takt signali bilan sinxronlanib, qadam bilan ishlaydi"]},
   {q:"Natijani yozish signali qachon berilishi shart?",o:["Summator kechikishi tugab, natija barqarorlashgandan keyin","Summator kirishiga qiymat berilishi bilan bir vaqtda","Operand registrlari ochilishidan oldinroq berilishi kerak","Bayroqlar registri yangilangandan keyin berilishi kerak"]},
- ]
+ ],
+ checks:[{at:2,q:"Registr chiqishlari uch holatli buferlar orqali ichki shinaga nima uchun ulanadi?",o:["Registr qiymatini avtomatik ravishda ikki barobar oshirish uchun","Bir vaqtda faqat bitta registr shinaga qiymat qo'yishi uchun","Takt chastotasini ikkiga bo'lib, registrga berish uchun","Registrdagi ma'lumotni tasodifiy qayta yozishdan himoyalash uchun"],a:1,e:"Aks holda shinada bir necha manba to'qnashib qolardi."},{at:7,q:"Akkumulyatorning vazifasi nima?",o:["Keyingi bajariladigan buyruq adresini saqlash va orttirish","Amal natijasi bayroqlarini va holat bitlarini saqlash","ALU amallarining asosiy operandi va natijasini saqlash","Xotiraga murojaat qilish adresini hisoblab berish"],a:2,e:"Qolgan registrlar: PC, flaglar, adres registri."},{at:12,q:"Ayirish amali summator orqali qanday bajariladi?",o:["A + (NOT B) + 1, ya'ni qo'shimcha kod orqali","A − B to'g'ridan-to'g'ri alohida ayirgich orqali","A · (NOT B) − 1 ko'paytirgich orqali hisoblanib","A + B + 1 ikki marta ketma-ket bajarilib"],a:0,e:"Dekrement ham A + (NOT 1) + 1 shaklida bajariladi."},{at:16,q:"Summator xotiraga egami?",o:["Faqat ketma-ket o'tkazmali turi natijani saqlay oladi","Yo'q: faqat kirishdagi qiymatlarga qarab chiqish beradi","Ha, lekin faqat o'tkazma bitini alohida triggerda saqlaydi","Ha: natijani keyingi amalgacha ichki triggerlarda saqlaydi"],a:1,e:"Natijani saqlash registrning vazifasi."}]
 },
 {
  id:"S1-A6", sem:1, week:6, type:"practice", no:6,
@@ -1986,7 +2012,7 @@ const LESSONS = [
   ["p","4-qadamda SUBWF f,0 buyrug'i (f − W) ni hisoblab natijani W ga yozadi: 05 − 03 = 02. 6-qadamda 05 − 05 = 00 bo'lgani uchun Z bayrog'i o'rnatiladi — bu solishtirish amalining PIC dagi ko'rinishi."],
   ["sim","alu"],
   ["h","Topshiriqlar"],
-  ["ol",["Variant raqamingiz N bo'lsin. W = (0x10 + N) va (0x20) = 0x30 uchun ADDWF 0x20,1 va SUBWF 0x20,0 buyruqlarini bajarib, trassirovka jadvalini tuzing.","BSF va BCF buyruqlaridan foydalanib, PORTB ning faqat 2- va 5-razryadlarini yoquvchi kod yozing.","BTFSC buyrug'i bilan tugma holatiga qarab tarmoqlanuvchi kod yozing va uning BTFSS bilan farqini tushuntiring.","DECFSZ asosida 200 martalik kechikish sikli yozing va uning bajarilish vaqtini f = 8 MHz uchun hisoblang.","Buyruqlarni uch guruhga (bayt, bit, konstanta va boshqaruv) ajratib, har biriga uchtadan misol yozing.","MPLAB X Simulator da dasturingizni qadamma-qadam bajarib, registrlar oynasi rasmini yuklang."]],
+  ["ol",["Variant raqamingiz N bo'lsin. W = (0x10 + N) va (0x20) = 0x30 uchun ADDWF 0x20,1 va SUBWF 0x20,0 buyruqlarini bajarib, trassirovka jadvalini tuzing.","BSF va BCF buyruqlaridan foydalanib, PORTB ning faqat 2- va 5-razryadlarini yoquvchi kod yozing.","BTFSC buyrug'i bilan tugma holatiga qarab tarmoqlanuvchi kod yozing va uning BTFSS bilan farqini tushuntiring.","DECFSZ asosida 200 martalik kechikish sikli yozing va uning bajarilish vaqtini f = 8 MHz uchun hisoblang.","Buyruqlarni uch guruhga (bayt, bit, konstanta va boshqaruv) ajratib, har biriga uchtadan misol yozing.","mikroC PRO for PIC da dasturingizni Software Simulator orqali qadamma-qadam bajarib, registrlar oynasi (Watch Values) rasmini yuklang."]],
   ["h","Xulosa"],
   ["p","PIC16 buyruqlar tizimi 35 ta bir xil formatli buyruqdan iborat va RISC yondashuvining aniq namunasi. Barcha amallar W registr va fayl registrlari o'rtasida bajariladi, natija yo'nalishi d bayrog'i bilan belgilanadi. Shartlar \"tekshir va tashlab ket\" buyruqlari orqali amalga oshiriladi; bajarilish vaqti buyruqlar sonidan bevosita hisoblanadi."],
  ],
@@ -2021,7 +2047,8 @@ const LESSONS = [
   {q:"Trassirovkada 05 − 05 amali bajarilganda nima sodir bo'ladi?",o:["Natija FF bo'ladi va C bayrog'i o'rnatiladi","Natija 00 bo'ladi, lekin bayroq o'zgarmay qoladi","Natija 05 bo'ladi va hech qanday bayroq qo'yilmaydi","Natija 00 bo'ladi va Z bayrog'i o'rnatiladi"]},
   {q:"PIC da solishtirish amali qanday amalga oshiriladi?",o:["SUBWF bilan ayirib, Z bayrog'ini tekshirish orqali","Maxsus CMP buyrug'i bilan bevosita bajariladi","BSF buyrug'i bilan bitni o'rnatish orqali","ADDWF bilan qo'shib, C bayrog'ini tekshirish orqali"]},
   {q:"PIC16 buyruqlar tizimi qaysi yondashuvning namunasi?",o:["Fon Neyman yondashuvining namunasi hisoblanadi","RISC yondashuvining aniq namunasi hisoblanadi","VLIW yondashuvining aniq namunasi hisoblanadi","CISC yondashuvining aniq namunasi hisoblanadi"]},
- ]
+ ],
+ checks:[{at:4,q:"ADDWF f,d buyrug'ida d = 1 bo'lsa natija qayerga yoziladi?",o:["f registriga","STATUS registriga","W registriga","Stek ko'rsatkichiga"],a:0,e:"d = 0 bo'lsa natija W ga yoziladi."},{at:9,q:"PIC da shartli o'tish buyruqlari o'rniga nima ishlatiladi?",o:["Faqat GOTO va CALL buyruqlari, ular shartni o'zi tekshiradi","Tekshir va tashlab ket buyruqlari: BTFSS, BTFSC, DECFSZ","Maxsus IF–ELSE buyruqlari mavjud va ular ishlatiladi","RETFIE va RETURN buyruqlari shartga qarab qaytaradi"],a:1,e:"Shart bajarilsa keyingi buyruq tashlab ketiladi (NOP, 2 sikl)."},{at:12,q:"f = 8 MHz da 6 ta bir sikli va 2 ta ikki sikli buyruq qancha vaqt oladi?",o:["8 µs","3 µs","5 µs","10 µs"],a:2,e:"t = (6 + 4) · 500 ns = 5 µs."},{at:15,q:"SUBWF 0x20,0 da 05 − 05 = 00 natija hosil bo'lganda qaysi bayroq o'rnatiladi?",o:["C (o'tkazma) bayrog'i","Z (nol) bayrog'i","Hech qaysi bayroq o'zgarmaydi","DC (yarim o'tkazma) bayrog'i"],a:1,e:"Bu solishtirish amalining PIC dagi ko'rinishi."}]
 },
 {
  id:"S1-M7", sem:1, week:7, type:"lecture", no:7,
@@ -2091,7 +2118,8 @@ const LESSONS = [
   {q:"Klassik PIC16 da ko'p baytli qo'shishda o'tkazma qanday hisobga olinadi?",o:["Qo'lda: BTFSC STATUS,C va INCF orqali qo'shiladi","Hisobga olinmaydi, chunki o'tkazma yo'qolib ketadi","ADDWFC buyrug'i bilan avtomatik hisobga olinadi","DAA buyrug'i bilan tuzatish kiritilib hisobga olinadi"]},
   {q:"0xFF qiymatini INCF bilan oshirganda nima sodir bo'ladi?",o:["Natija 0x00 bo'ladi va C emas, Z bayrog'i o'rnatiladi","Natija 0x100 bo'lib, ikki baytga joylanadi","Natija 0x00 bo'ladi va C bayrog'i o'rnatiladi","Natija 0xFF da qoladi va hech qanday bayroq qo'yilmaydi"]},
   {q:"BCD ko'rinishida sonlar qanday saqlanadi?",o:["Sonlar faqat o'n oltilik ko'rinishda saqlanadi","Har bir o'nlik raqam alohida tetradada saqlanadi","Har bir o'nlik raqam alohida baytda saqlanadi","Butun son bitta baytda ikkilik ko'rinishda saqlanadi"]},
- ]
+ ],
+ checks:[{at:6,q:"Z (nol) bayrog'i qachon o'rnatiladi?",o:["Natijaning barcha razryadlari nol bo'lganda","Natijadagi birlar soni juft bo'lganda o'rnatiladi","Eng katta razryaddan o'tkazma chiqqanda o'rnatiladi","Natijaning eng katta biti 1 bo'lganda o'rnatiladi"],a:0,e:"C — o'tkazma, N — ishora, P — juftlik bayrog'i."},{at:12,q:"Qo'shish natijasi 8 razryaddan oshsa, chiqib ketgan bit qayerga tushadi?",o:["DC bayrog'iga","Z bayrog'iga","Stek ko'rsatkichiga","C bayrog'iga"],a:3,e:"Akkumulyatorda faqat quyi bayt qoladi; bu ko'p baytli arifmetikaning asosi."},{at:16,q:"SUBWF dan keyin C = 0 bo'lsa, bu nimani anglatadi?",o:["Ayirma nolga teng: f = W","Ayirma musbat: f > W","Qarz hosil bo'lgan: f < W","Natija 8 razryaddan oshib ketgan"],a:2,e:"PIC da C ayirishda teskari qarz sifatida talqin qilinadi."},{at:22,q:"0xFF ni INCF bilan oshirganda qaysi bayroq o'rnatiladi?",o:["Z bayrog'i, C emas","C bayrog'i, Z emas","Hech qaysi bayroq o'zgarmaydi","C va Z birgalikda"],a:0,e:"INCF va DECF faqat Z ni yangilaydi."}]
 },
 {
  id:"S1-A7", sem:1, week:7, type:"practice", no:7,
@@ -2106,7 +2134,7 @@ const LESSONS = [
   ["n","Xavfsizlik: o'lchashlarni faqat multimetr yoki ossillografning umumiy simi qurilma GND siga ulangan holda bajaring. Quvvat berilgan sxemada mikrosxema oyoqchalarini metall asboblar bilan qisqa tutashtirmang."],
   ["h","Apparat qismini tekshirish tartibi"],
   ["ol",["Quvvat kuchlanishini VDD va VSS oyoqchalarida o'lchang: 5 V ± 0,25 V bo'lishi kerak.","MCLR liniyasidagi kuchlanishni tekshiring: u 10 kΩ rezistor orqali +5 V ga tortilgan va yuqori darajada bo'lishi shart. MCLR past bo'lsa kristall doimiy reset holatida turadi.","Generator ishlayotganini ossillograf bilan OSC2 da tekshiring; kvarts ishlamasa sinusga yaqin tebranish ko'rinmaydi.","Port chiqishlarida daraja o'zgarishini kuzating: dastur ishlayotgan bo'lsa, LED liniyasida davriy o'zgarish bo'ladi.","Kondensatorlarni tekshiring: har bir quvvat oyoqchasiga 0,1 µF bloklovchi kondensator qo'yilgan bo'lishi kerak.","Ulanishlarni sxema bilan solishtiring va \"sovuq payvand\" ni lupa ostida tekshiring."]],
-  ["t",["Belgi","Ehtimoliy sabab","Tekshirish"],[["Hech narsa ishlamaydi","Quvvat yo'q yoki MCLR pastda","VDD va MCLR da kuchlanishni o'lchash"],["Kristall qayta yuklanaveradi","Watchdog yoqilgan, tozalanmagan","WDTE bitini va CLRWDT() ni tekshirish"],["Dastur juda sekin ishlaydi","Generator ichki RC ga tushib qolgan","FOSC konfiguratsiyasini tekshirish"],["PORTA dan hech narsa o'qilmaydi","Liniyalar analog rejimda","ADCON1 registrini sozlash"],["LED xira yonadi","Rezistor qiymati katta yoki quvvat pasaygan","Tokni o'lchash, R ni hisoblash"],["Tugma bir bosishga bir necha marta ishlaydi","Kontaktlar titrashi filtrlanmagan","Dasturiy kechikish qo'shish"]]],
+  ["t",["Belgi","Ehtimoliy sabab","Tekshirish"],[["Hech narsa ishlamaydi","Quvvat yo'q yoki MCLR pastda","VDD va MCLR da kuchlanishni o'lchash"],["Kristall qayta yuklanaveradi","Watchdog yoqilgan, tozalanmagan","_WDT_OFF bitini va asm CLRWDT ni tekshirish"],["Dastur juda sekin ishlaydi","Generator ichki RC ga tushib qolgan","FOSC konfiguratsiyasini tekshirish"],["PORTA dan hech narsa o'qilmaydi","Liniyalar analog rejimda","ADCON1 registrini sozlash"],["LED xira yonadi","Rezistor qiymati katta yoki quvvat pasaygan","Tokni o'lchash, R ni hisoblash"],["Tugma bir bosishga bir necha marta ishlaydi","Kontaktlar titrashi filtrlanmagan","Dasturiy kechikish qo'shish"]]],
   ["h","Dasturiy otladka usullari"],
   ["ul",["Qadamma-qadam bajarish (Step Into / Step Over) — har bir buyruqdan keyin registrlar holatini kuzatish","To'xtash nuqtalari (breakpoint) — dasturni kerakli joyda to'xtatib, o'zgaruvchilarni tekshirish","Watch oynasi — tanlangan o'zgaruvchi va registrlar qiymatini real vaqtda kuzatish","Stopwatch — ikki nuqta orasidagi sikllar sonini va vaqtni o'lchash","Diagnostik chiqish — bo'sh port razryadiga LED ulab, dastur qaysi tarmoqqa kirganini ko'rsatish","UART orqali nosozlik xabarlarini kompyuterga yuborish"]],
   ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
@@ -2115,7 +2143,7 @@ const LESSONS = [
   ["p","Tugma simulyatorida drebezg rejimini yoqib, filtrsiz hisoblagichning noto'g'ri ishlashini kuzating — bu amalda eng ko'p uchraydigan \"dastur to'g'ri, lekin qurilma noto'g'ri ishlaydi\" holati."],
   ["sim","btnled"],
   ["h","Topshiriqlar"],
-  ["ol",["Stend yoki Proteusda ishlamayotgan sxema bering (o'qituvchi tomonidan xato kiritiladi) va nosozlikni tizimli tartibda toping.","VDD, MCLR va OSC2 nuqtalaridagi o'lchash natijalarini jadvalga yozing.","MPLAB X Simulator da breakpoint qo'yib, tugma bosilgandagi PORTD qiymatini kuzating.","Stopwatch bilan asosiy sikl bajarilish vaqtini o'lchang va nazariy hisob bilan solishtiring.","Yuqoridagi jadvalga o'zingiz duch kelgan ikkita yangi nosozlik belgisini qo'shing.","Otladka oynasi yoki o'lchash natijalarining rasmini yuklang."]],
+  ["ol",["Stend yoki Proteusda ishlamayotgan sxema bering (o'qituvchi tomonidan xato kiritiladi) va nosozlikni tizimli tartibda toping.","VDD, MCLR va OSC2 nuqtalaridagi o'lchash natijalarini jadvalga yozing.","mikroC PRO for PIC Software Simulator da breakpoint qo'yib, tugma bosilgandagi PORTD qiymatini kuzating.","Stopwatch bilan asosiy sikl bajarilish vaqtini o'lchang va nazariy hisob bilan solishtiring.","Yuqoridagi jadvalga o'zingiz duch kelgan ikkita yangi nosozlik belgisini qo'shing.","Otladka oynasi yoki o'lchash natijalarining rasmini yuklang."]],
   ["h","Xulosa"],
   ["p","Nosozlikni qidirish tizimli tartibda — quvvat, reset, generator, portlar, dastur ketma-ketligida olib boriladi. Apparat tekshiruvi multimetr va ossillograf bilan, dasturiy tekshiruv esa breakpoint, qadamma-qadam bajarish va Watch oynasi yordamida bajariladi. Diagnostik chiqishlar dastur oqimini kuzatishning eng sodda va samarali usuli bo'lib qolmoqda."],
  ],
@@ -2150,7 +2178,8 @@ const LESSONS = [
   {q:"Tugma simulyatorida drebezg rejimi nimani ko'rsatadi?",o:["Filtrsiz hisoblagichning noto'g'ri ishlashini ko'rsatadi","Watchdog taymerining ishlashini ko'rsatib beradi","LED yorqinligining pasayishini ko'rsatib beradi","Generator chastotasining o'zgarishini ko'rsatib beradi"]},
   {q:"Apparat tekshiruvi qanday asboblar bilan bajariladi?",o:["Faqat MPLAB X Simulator va breakpoint vositalari bilan","Faqat Watch oynasi va Stopwatch o'lchov vositasi bilan","Faqat kompilyator ogohlantirishlari va xatolari asosida","Multimetr va ossillograf (yoki mantiqiy probnik) bilan"]},
   {q:"Nosozlikni qidirishning to'g'ri ketma-ketligi qaysi?",o:["Quvvat, reset, generator, portlar, dastur ketma-ketligida","Portlar, quvvat, dastur, generator, reset tartibida","Generator, dastur, quvvat, portlar, reset tartibida","Dastur, portlar, generator, reset, quvvat ketma-ketligida"]},
- ]
+ ],
+ checks:[{at:2,q:"Qurilma ishlamaganda tekshirish qaysi tartibda olib boriladi?",o:["Barcha tugunlar bir vaqtda almashtirib ko'riladi","Avval signal, so'ng dastur, oxirida quvvat tekshiriladi","Avval quvvat, so'ng signal, oxirida dastur mantiqi","Avval dastur mantiqi, so'ng quvvat va signal tekshiriladi"],a:2,e:"Tekshirish har doim oddiydan murakkabga qarab boradi."},{at:4,q:"MCLR liniyasi qanday holatda bo'lishi shart?",o:["Umumiy simga ulangan, past darajada ushlab turilgan bo'lishi kerak","10 kΩ rezistor orqali +5 V ga tortilgan, yuqori darajada","Ochiq qoldirilgan, hech narsaga ulanmagan bo'lishi kerak","Kvarts rezonator orqali OSC2 chiqishiga ulangan bo'lishi kerak"],a:1,e:"MCLR past bo'lsa kristall doimiy reset holatida turadi."},{at:7,q:"Dasturiy otladkada breakpoint (to'xtash nuqtasi) nima uchun kerak?",o:["Dastur bajarilishini avtomatik ravishda tezlashtirish uchun","Dasturni kerakli joyda to'xtatib, qiymatlarni ko'rish uchun","Konfiguratsiya bitlarini o'zgartirib, kodni himoyalash uchun","Kristallni programmator bilan yozib, tekshirish uchun"],a:1,e:"Watch oynasi esa qiymatlarni real vaqtda ko'rsatadi."}]
 },
 {
  id:"S1-M8", sem:1, week:8, type:"lecture", no:8,
@@ -2210,7 +2239,8 @@ const LESSONS = [
   {q:"PIC16F877A, f = 20 MHz da bitta bayt o'qish sikli qancha davom etadi?",o:["1 µs davom etadi, chunki kutish taktlari qo'shiladi","400 ns davom etadi, chunki ikki sikl ketadi","200 ns davom etadi, bu mashina sikliga teng","50 ns davom etadi, bu takt davriga teng bo'ladi"]},
   {q:"f = 20 MHz da nazariy jihatdan sekundiga qancha murojaat bajarish mumkin?",o:["20 million murojaat bajarish mumkin bo'ladi","1 million murojaat bajarish mumkin bo'ladi","5 million murojaat bajarish mumkin bo'ladi","80 million murojaat bajarish mumkin bo'ladi"]},
   {q:"2 ta kutish takti qo'shilsa, 200 ns li sikl va tezlik qanday o'zgaradi?",o:["Sikl 100 ns ga qisqaradi, tezlik ikki barobar ortadi","Sikl 800 ns ga cho'ziladi, tezlik to'rt barobar kamayadi","Sikl 200 ns da qoladi, tezlik o'zgarmay turadi","Sikl 400 ns ga cho'ziladi, tezlik ikki baravar kamayadi"]},
- ]
+ ],
+ checks:[{at:6,q:"Yozish siklidagi setup time va hold time nimani bildiradi?",o:["WR atrofida ma'lumot barqaror turishi kerak bo'lgan vaqtlar","Uzilish so'rovi kelgandan xizmat boshlanguncha o'tgan vaqtlar","Adres chiqqandan keyin tanlash signalini kutish vaqtlari","Mashina siklining boshlanishi va tugashi orasidagi vaqtlar"],a:0,e:"Bu talablar buzilsa, xotiraga noto'g'ri qiymat yoziladi."},{at:10,q:"Kutish taktlari (wait states) qachon qo'shiladi?",o:["Protsessor faqat ichki xotira bilan ishlaganda har safar","Sekin qurilma READY orqali kutishni so'raganda","Dastur siklining oxirgi buyrug'i bajarilayotganda doim","Har bir uzilish so'rovi kelganda avtomatik ravishda"],a:1,e:"Ichki xotirali MK larda kutish taktlari kerak emas."},{at:13,q:"Uzilish sikli boshlanganda protsessor stekka nimani joylashtiradi?",o:["Faqat akkumulyatorni va bayroqlarni","Uzilish vektori adresini va stek ko'rsatkichini","PC ni va holat registrini","Barcha SFR registrlarini birma-bir"],a:2,e:"Xizmat tugagach RETFIE saqlangan qiymatlarni tiklaydi."},{at:15,q:"f = 20 MHz da qurilma 2 ta kutish takti talab qilsa, sikl necha ns bo'ladi?",o:["200 ns","800 ns","400 ns","600 ns"],a:2,e:"Sikl 200 ns dan 400 ns gacha cho'ziladi, tezlik ikki baravar kamayadi."}]
 },
 {
  id:"S1-A8", sem:1, week:8, type:"practice", no:8,
@@ -2228,8 +2258,8 @@ const LESSONS = [
   ["fig","icsp","1-rasm. ICSP orqali programmatorni mikrokontrollerga ulash"],
   ["ol",["Programmator MCLR liniyasiga dasturlash kuchlanishini beradi va kristallni dasturlash rejimiga o'tkazadi","PGC liniyasi bo'yicha takt impulslari uzatiladi","PGD liniyasi bo'yicha buyruq va ma'lumot bitlari ketma-ket uzatiladi","Flash xotiraga blok-blok yozish bajariladi","Yozilgan ma'lumot qayta o'qib solishtiriladi (verify)","Konfiguratsiya so'zi yoziladi va kristall ishchi rejimga qaytariladi"]],
   ["n","Muhim: ICSP ishlatilganda RB6 va RB7 liniyalariga yuklama (LED, kondensator, past qarshilikli element) ulanmasligi kerak, aks holda dasturlash signallari buziladi va yozish xatolik bilan tugaydi."],
-  ["h","MPLAB X IPE da yozish tartibi"],
-  ["ol",["Programmatorni USB orqali kompyuterga, ICSP razyomini esa platagaz ulang.","MPLAB X IPE ni oching, Device maydonida PIC16F877A ni tanlang.","Connect tugmasi bilan programmatorni ulang; qurilma ID si aniqlanishi kerak.","Browse orqali HEX faylni tanlang.","Kerak bo'lsa Erase bilan kristallni tozalang.","Program tugmasi bilan yozishni boshlang va jarayon oynasini kuzating.","Verify bilan yozilgan kodni tekshiring.","Programmatorni uzib, qurilmaga ishchi quvvat bering va natijani tekshiring."]],
+  ["h","Programmator bilan yozish tartibi (mikroC PRO for PIC va PICkit)"],
+  ["ol",["Programmatorni USB orqali kompyuterga, ICSP razyomini esa platadagi ICSP uyasiga ulang.","mikroC PRO for PIC da loyihani kompilyatsiya qiling: Build (Ctrl+F9), .hex fayl hosil bo'ladi.","Programmator dasturini (PICkit yoki mikroProg Suite) oching, Device maydonida PIC16F877A ni tanlang.","Connect tugmasi bilan programmatorni ulang; qurilma ID si aniqlanishi kerak.","Browse orqali HEX faylni tanlang.","Kerak bo'lsa Erase bilan kristallni tozalang.","Program (Write) tugmasi bilan yozishni boshlang va jarayon oynasini kuzating.","Verify bilan yozilgan kodni tekshiring, so'ng programmatorni uzib qurilmaga ishchi quvvat bering."]],
   ["t",["Xato xabari","Sababi","Yechimi"],[["Target device not found","Ulanish uzilgan yoki quvvat yo'q","ICSP simlarini va VDD ni tekshirish"],["Failed to program","RB6/RB7 da yuklama bor","Yuklamani uzish yoki jumper qo'yish"],["Verify failed","Flash eskirgan yoki ulanish shovqinli","Simlarni qisqartirish, qayta yozish"],["Device ID = 0x0000","MCLR da kuchlanish yetishmaydi","Pull-up rezistorni tekshirish"],["Kod o'qilmayapti","CP (kod himoyasi) yoqilgan","To'liq o'chirish (Erase) qilish"]]],
   ["h","Himoya bitlari"],
   ["p","CP (Code Protect) biti yoqilganda dastur kodini kristalldan qayta o'qib bo'lmaydi — bu intellektual mulkni himoya qiladi. CPD biti EEPROM ma'lumotlarini himoyalaydi, WRT esa dasturning o'z Flash xotirasiga yozishini cheklaydi. O'quv jarayonida bu bitlar odatda o'chirilgan holda qoldiriladi."],
@@ -2272,7 +2302,8 @@ const LESSONS = [
   {q:"CPD biti nimani himoyalaydi?",o:["Operativ xotiradagi stekni himoyalab turadi","Flash dastur kodini o'qishdan himoyalaydi","Konfiguratsiya so'zini o'zgartirishdan himoyalaydi","EEPROM ma'lumotlarini himoyalab qo'yadi"]},
   {q:"WRT biti qanday cheklovni o'rnatadi?",o:["Kodni kristalldan o'qib olishni butunlay taqiqlaydi","Dasturning o'z Flash xotirasiga yozishini cheklaydi","Konfiguratsiya so'zini o'qishni cheklab qo'yadi","EEPROM ga yozish sikllarini cheklab qo'yadi"]},
   {q:"O'quv jarayonida himoya bitlari qanday holatda qoldiriladi?",o:["Faqat CP yoqilib, qolgani o'chiriladi","Barchasi yoqilgan holda qoldiriladi","Faqat WRT yoqilib, qolgani o'chiriladi","O'chirilgan holda qoldiriladi"]},
- ]
+ ],
+ checks:[{at:2,q:"Programmatorning vazifasi nima?",o:["HEX faylni mikrokontroller Flash xotirasiga yozish","Sxemani virtual muhitda modellashtirib, natijani ko'rsatish","Manba kodni mashina kodiga kompilyatsiya qilish va xatolarni topish","Mikrokontrollerning takt chastotasini sozlab, kvarts tanlash"],a:0,e:"Kod Flash xotiraga, konfiguratsiya so'zi maxsus yacheykaga yoziladi."},{at:7,q:"ICSP da ma'lumot (PGD) va takt (PGC) qaysi liniyalar orqali uzatiladi?",o:["PGD — RB3, PGC — RB4","PGD — RB7, PGC — RB6","PGD — RA0, PGC — RA1","PGD — RB6, PGC — RB7"],a:1,e:"RB6 va RB7 ga yuklama ulanmasligi kerak."},{at:10,q:"Verify failed xabari qaysi sabab bilan chiqishi mumkin?",o:["Programmator quvvati o'chirilgan holatda ulangan","CP biti yoqilgan holatda yozilgan","MCLR da kuchlanish yetishmaydi","Flash eskirgan yoki ulanish shovqinli"],a:3,e:"Yechim: simlarni qisqartirish va qayta yozish."},{at:12,q:"CP (Code Protect) biti yoqilganda nima ro'y beradi?",o:["Dastur kodini kristalldan qayta o'qib bo'lmaydi","EEPROM ma'lumotlari faqat yozishdan himoyalanadi","Konfiguratsiya so'zi o'chib ketadi va qayta yoziladi","Flashga yozish umuman taqiqlanib qoladi"],a:0,e:"CPD EEPROM ni, WRT esa Flashga yozishni cheklaydi."}]
 },
 {
  id:"S1-M9", sem:1, week:9, type:"lecture", no:9,
@@ -2338,7 +2369,8 @@ const LESSONS = [
   {q:"Uzilish xizmat qism dasturida nima qilish kerak?",o:["O'zgartiriladigan registrlarni (W, STATUS) saqlab, oxirida tiklash","Barcha uzilishlarni butunlay o'chirib, qayta yoqmaslik","Stekni nollab, qaytish adreslarini o'chirib tashlash","PC ga bevosita yangi qiymat yozib qo'yish"]},
   {q:"f = 8 MHz, sikl tanasi 4 ta bir sikli buyruq, CALL, 6 ta bir sikli buyruq va RETURN dan iborat. Jami necha sikl?",o:["12 sikl: barcha buyruqlar bir sikl deb olinganda","10 sikl: CALL va RETURN hisobga olinmaganda","14 sikl: 4 + 2 + 6 + 2 hisobidan kelib chiqadi","20 sikl: har bir buyruq ikki sikl deb olinganda"]},
   {q:"14 sikl f = 8 MHz da qancha vaqt oladi va sekundiga qancha takrorlanadi?",o:["3,5 µs oladi, sekundiga taxminan 286 000 marta takrorlanadi","7 µs oladi, sekundiga taxminan 143 000 marta takrorlanadi","14 µs oladi, sekundiga taxminan 71 000 marta takrorlanadi","56 µs oladi, sekundiga taxminan 18 000 marta takrorlanadi"]},
- ]
+ ],
+ checks:[{at:8,q:"Komandalar hisoblagichi (PC) nimani saqlaydi?",o:["Keyingi buyruqning dastur xotirasidagi adresini","Stek cho'qqisining adresini va chuqurligini","Hozir bajarilayotgan buyruqning operatsiya kodini","Oxirgi bajarilgan amalning natijasini va bayroqlarni"],a:0,e:"Buyruq kodini buyruq registri (IR) saqlaydi."},{at:14,q:"PIC16 da stek chuqurligi 8 darajadan oshsa nima bo'ladi?",o:["Stek dastur xotirasining bo'sh qismiga kengayadi","Eng yangi adres yozilmaydi va xato bayrog'i o'rnatiladi","Eng eski qaytish adresi yo'qoladi, RETURN adashadi","Protsessor avtomatik ravishda to'xtab qoladi va reset bo'ladi"],a:2,e:"Ichma-ich chaqiriqlarni chuqur qilmaslik kerak."},{at:18,q:"PIC16 da uzilish vektori qaysi adresda joylashgan?",o:["0x0000","0x0008","0x0004","0x0100"],a:2,e:"RETFIE xizmat tugagach PC ni tiklaydi va GIE ni yoqadi."},{at:21,q:"f = 8 MHz da sikl 500 ns. 14 sikllik tsikl necha µs davom etadi?",o:["7 µs","0,5 µs","14 µs","3,5 µs"],a:0,e:"14 · 500 ns = 7000 ns = 7 µs."}]
 },
 {
  id:"S1-A9", sem:1, week:9, type:"practice", no:9,
@@ -2399,7 +2431,8 @@ const LESSONS = [
   {q:"Yuguruvchi olovda siljitish necha marta bajarilgach qiymat nolga aylanadi?",o:["8 marta bajarilgach nolga aylanadi","16 marta bajarilgach nolga aylanadi","Hech qachon nolga aylanmaydi","4 marta bajarilgach nolga aylanadi"]},
   {q:"ADCON1 = 0x06 qatori port bilan ishlashda nima uchun kerak?",o:["Barcha portlarni bir vaqtda nollab chiqadi","Chiqish toklarining chegarasini belgilab qo'yadi","PORTB liniyalarini chiqish sifatida sozlab qo'yadi","PORTA liniyalarini analog rejimdan raqamli rejimga o'tkazadi"]},
   {q:"Port bilan ishlash qaysi qadamdan boshlanadi?",o:["TRIS registrida yo'nalishni belgilashdan boshlanadi","Rezistor qiymatini hisoblashdan boshlanadi","Kechikish funksiyasini chaqirishdan boshlanadi","PORT registriga darhol qiymat yozishdan boshlanadi"]},
- ]
+ ],
+ checks:[{at:1,q:"Chiqishga qiymat yozishdan oldin nima qilish kerak?",o:["PORT registrini 1 ga o'rnatib qo'yish","Taymerni ishga tushirib, PR2 ni sozlash","TRIS da kerakli razryadlarni 0 qilish","Uzilishlarni ruxsat etish va GIE ni yoqish"],a:2,e:"TRIS: 1 — kirish, 0 — chiqish."},{at:4,q:"PIC16F877A da bitta chiqish liniyasi uchun ruxsat etilgan tok qancha?",o:["200 mA","25 mA","100 mA","5 mA"],a:1,e:"100 mA butun port uchun, 200 mA kristall uchun jami."},{at:9,q:"PORTB ning 0-razryadini boshqa razryadlarga tegmay o'chirish uchun qaysi amal ishlatiladi?",o:["PORTB = 0x01 — boshqa razryadlarni ham o'zgartiradi","PORTB |= 0x01 — razryadni yoqadi","PORTB &= ~0x01","PORTB ^= 0x01 — razryadni almashtiradi"],a:2,e:"OR yoqadi, XOR almashtiradi, AND inversiyalangan maska o'chiradi."}]
 },
 {
  id:"S1-M10", sem:1, week:10, type:"lecture", no:10,
@@ -2464,7 +2497,8 @@ const LESSONS = [
   {q:"MOVLW 0x25 va ADDLW 0x1A buyruqlaridan keyin W qiymati qanday bo'ladi?",o:["0x25 bo'ladi, chunki qo'shish amali bajarilmaydi","0x3F bo'ladi va STATUS bayroqlari yangilanadi","0x00 bo'ladi va Z bayrog'i o'rnatiladi","0x1A bo'ladi, chunki oxirgi qiymat yozib qo'yiladi"]},
   {q:"MOVWF 0x20 buyrug'i namunadagi dasturda nimani bajaradi?",o:["Natijani 0x20 yacheykaga yozib qo'yadi","0x20 yacheykani butunlay nollab qo'yadi","W va 0x20 ni qo'shib, natijani W ga yozadi","0x20 konstantasini W registrga yuklaydi"]},
   {q:"Dastur bajarilishi qanday tashkil etiladi?",o:["Faqat uzilishlar hisobiga, asosiy sikl bo'lmagan holda","Olish, deshifratsiya, bajarish va yozish siklining uzluksiz takrorlanishi","Faqat bir marta bajarilib, so'ng protsessor to'xtashi orqali","Barcha buyruqlarning bir vaqtda parallel bajarilishi orqali"]},
- ]
+ ],
+ checks:[{at:4,q:"Mikroprotsessor yadrosi qaysi uch guruhdan iborat?",o:["Shina, kvarts va uzilish guruhlari","Xotira, port va taymer guruhlari","Operatsion, boshqaruv va interfeys","ALU, Flash va EEPROM guruhlari"],a:2,e:"Operatsion qismga ALU va registrlar kiradi."},{at:13,q:"Ikki sonni solishtirish mikroprotsessorda qanday bajariladi?",o:["Sonlar xotiraga ko'chirilib, ularning adreslari taqqoslanadi","Ikki son bit-bit XOR qilinib, natija akkumulyatorga yoziladi","Ikkala son qo'shilib, keyin C bayrog'i tekshiriladi","Ayirish bajariladi, faqat bayroqlar o'rnatiladi"],a:3,e:"Keyingi shartli o'tish shu bayroqlarni tekshiradi."},{at:16,q:"Buyruq bajarilish siklining to'g'ri tartibi qaysi?",o:["Fetch, Execute, Decode, Write back, Operand fetch","Operand fetch, Fetch, Decode, Write back, Execute","Decode, Fetch, Execute, Operand fetch, Write back","Fetch, Decode, Operand fetch, Execute, Write back"],a:3,e:"Fetch bosqichida PC orttiriladi."}]
 },
 {
  id:"S1-A10", sem:1, week:10, type:"practice", no:10,
@@ -2483,7 +2517,7 @@ const LESSONS = [
   ["p","Mexanik kontakt ulanish va uzilish paytida bir necha marta sakraydi va 1–10 ms davomida o'nlab noto'g'ri o'tishlar hosil qiladi. Filtrlanmasa, bitta bosish bir necha marta qayd etiladi. Dasturiy filtr eng sodda va arzon yechim: birinchi o'zgarish aniqlangach 15–20 ms kutiladi va holat qayta tekshiriladi."],
   ["h","Ikki ish rejimi"],
   ["p","Dastur mikroC PRO for PIC muhitida yoziladi. Loyiha sozlamalari: MCU — PIC16F877A, takt chastotasi — 8 MHz (kvarts). Portlarning alohida razryadlariga PORTB.F0 kabi murojaat qilinadi."],
-  ["c","/* 1-rejim: tugma bosilgan vaqtda LED yonadi */\n%s\n\nvoid main()\n{\n    ADCON1 = 0x06;\n    TRISB.F0 = 0;          // LED chiqish\n    TRISD.F0 = 1;          // tugma kirish\n\n    while (1)\n    {\n        if (PORTD.F0 == 0) PORTB.F0 = 1;\n        else               PORTB.F0 = 0;\n    }\n}"],
+  ["c","/* 1-rejim: tugma bosilgan vaqtda LED yonadi */\n__CONFIG(_HS_OSC & _WDT_OFF & _PWRTE_ON & _BODEN_ON & _LVP_OFF & _CP_OFF & _WRT_OFF & _CPD_OFF);\n\nvoid main()\n{\n    ADCON1 = 0x06;\n    TRISB.F0 = 0;          // LED chiqish\n    TRISD.F0 = 1;          // tugma kirish\n\n    while (1)\n    {\n        if (PORTD.F0 == 0) PORTB.F0 = 1;\n        else               PORTB.F0 = 0;\n    }\n}"],
   ["c","/* 2-rejim: har bosishda LED holati almashadi (toggle) */\nwhile (1)\n{\n    if (PORTD.F0 == 0)                 // bosildi?\n    {\n        Delay_ms(20);                  // drebezg filtri\n        if (PORTD.F0 == 0)             // hamon bosilganmi?\n        {\n            PORTB.F0 = !PORTB.F0;      // holatni almashtirish\n            while (PORTD.F0 == 0);     // qo'yib yuborishni kutish\n            Delay_ms(20);\n        }\n    }\n}"],
   ["p","Ikkinchi rejimda uchta muhim element bor: filtr kechikishi, holatni inversiyalash va tugma qo'yib yuborilishini kutish. Oxirgi qadam bo'lmasa, tugma ushlab turilganda LED uzluksiz miltillaydi."],
   ["h","Assembler varianti"],
@@ -2526,7 +2560,8 @@ const LESSONS = [
   {q:"Tugma uchun 10 kΩ rezistor qanday vazifani bajaradi?",o:["Cheklovchi rezistor sifatida LED tokini cheklab beradi","Bloklovchi element sifatida shovqinni silliqlab beradi","Tortuvchi (pull-up) rezistor sifatida liniyani 1 ga tortadi","Himoya elementi sifatida kuchlanishni cheklab turadi"]},
   {q:"Tugmani o'qish qaysi qadamlardan boshlanadi?",o:["Kirish liniyasini sozlash va tortuvchi rezistorni ta'minlashdan","Drebezg filtri uchun kechikish funksiyasini yozishdan","ADC modulini sozlab, kuchlanishni o'lchashdan","LED chiqishini sozlash va rezistor qiymatini hisoblashdan"]},
   {q:"Ichki pull-up yoqilsa, tashqi rezistor kerakmi?",o:["Kerak emas, ichki rezistor liniyani tortib turadi","Kerak, chunki ichki pull-up faqat chiqishda ishlaydi","Kerak, aks holda qisqa tutashuv yuzaga keladi","Kerak, ichki rezistor yetarli kuchli bo'lmaydi"]},
- ]
+ ],
+ checks:[{at:3,q:"Pull-up sxemasida tugma bosilganda liniyada qanday mantiqiy daraja o'qiladi?",o:["Yuqori qarshilikli holat","Aniq qiymat yo'q, tasodifiy","Mantiqiy 0","Mantiqiy 1"],a:2,e:"Bosilmaganda liniya rezistor orqali 1 ga tortilgan."},{at:6,q:"Kontaktlar titrashi (bounce) dasturda qanday bartaraf etiladi?",o:["Tugmaga ikkinchi tortuvchi rezistorni parallel ulash","Tugmani tez-tez so'roq qilish chastotasini oshirish","15–20 ms kutib, holatni qayta tekshirish","Uzilishlarni butunlay o'chirib qo'yib, kutish"],a:2,e:"Titrash 1–10 ms davom etadi."},{at:11,q:"Toggle rejimida tugma qo'yib yuborilishini kutish nima uchun kerak?",o:["Aks holda ushlanganda LED uzluksiz miltillaydi","Aks holda LED umuman yonmaydi, tugma bosilmaydi","Aks holda TRIS registri o'zgarib ketadi","Aks holda kristall qizib ketadi va reset bo'ladi"],a:0,e:"Ushlab turilgan tugma har sikl yangi bosish deb hisoblanadi."}]
 },
 {
  id:"S1-M11", sem:1, week:11, type:"lecture", no:11,
@@ -2586,7 +2621,8 @@ const LESSONS = [
   {q:"Umumiy shinaga bir nechta qurilmani ulash nima hisobiga mumkin bo'ladi?",o:["Adres deshifratorining o'zi hisobiga mumkin bo'ladi","Uch holatli buferlar hisobiga mumkin bo'ladi","Magistral protokoli hisobiga mumkin bo'ladi","Arbitraj sxemasi hisobiga mumkin bo'ladi"]},
   {q:"Magistral qurilmalari qanday ikki asosiy guruhga ajratiladi?",o:["Analog va raqamli guruhlarga ajratiladi","Master va slave guruhlariga ajratiladi","Tez va sekin guruhlarga ajratiladi","Ichki va tashqi guruhlarga ajratiladi"]},
   {q:"Loyihalashda nimalar albatta hisobga olinadi?",o:["Shina yuklamasi va konflikt xavfi hisobga olinadi","Faqat korpus o'lchamlari hisobga olinadi","Faqat qurilmalarning narxi hisobga olinadi","Faqat dastur hajmi hisobga olinadi"]},
- ]
+ ],
+ checks:[{at:5,q:"Magistralga ulangan chiqishlar nega uch holatli bo'lishi shart?",o:["Ma'lumotni uzatish paytida avtomatik shifrlash uchun","Tanlanmaganlar Z holatda shinadan uzilishi uchun","Signal tezligini oshirish va fronti qisqartirish uchun","Energiya sarfini nolga tushirib, shinani sovutish uchun"],a:1,e:"Uch holat: 0, 1 va yuqori qarshilikli Z."},{at:9,q:"Adres deshifratori adres razryadlarini qanday ishlatadi?",o:["Yuqori razryadlar CS ni, quyilari yacheykani tanlaydi","Quyi razryadlar qurilmani tanlaydi, yuqorilari esa yacheykani ko'rsatadi","Barcha razryadlar faqat yacheykani ko'rsatadi, qurilma esa tanlanmaydi","Yuqori razryadlar ma'lumot sifatida alohida uzatiladi"],a:0,e:"CS — Chip Select signali."},{at:11,q:"16 razryadli adres va 8 K li mikrosxemalarda nechta razryad qurilmani tanlaydi?",o:["3 ta","13 ta","8 ta","16 ta"],a:0,e:"8 K = 2^13, qolgan 3 razryad 8 ta qurilmani tanlaydi."},{at:13,q:"DMA kontroller shinani olish uchun nima qiladi?",o:["HOLD yuboradi, protsessor HLDA bilan javob beradi","Protsessorni to'liq o'chirib qo'yadi va shinani egallaydi","Uzilish vektoriga o'tadi va stekni to'ldirib qo'yadi","RESET signalini berib, protsessorni qayta ishga tushiradi"],a:0,e:"Protsessor o'z chiqishlarini Z holatga o'tkazadi."}]
 },
 {
  id:"S1-A11", sem:1, week:11, type:"practice", no:11,
@@ -2647,7 +2683,8 @@ const LESSONS = [
   {q:"Bir vaqtda bosilgan tugmalar qanday hal qilinishi mumkin?",o:["Umuman hal qilinmaydi, xato holat deb tashlanadi","Alohida kombinatsiya sifatida yoki prioritet tartibida","Faqat prioritet tartibida, boshqa yo'l mavjud emas","Faqat alohida kombinatsiya sifatida qayta ishlanadi"]},
   {q:"Namunadagi dasturda PORTB = m qatori nimani bajaradi?",o:["Portni butunlay nollab, barcha LED ni o'chiradi","Tugma holatini o'qib, maskaga yozib qo'yadi","Maskani bir razryad chapga siljitib qo'yadi","Joriy maskani portga chiqarib, LED holatini belgilaydi"]},
   {q:"Dasturdagi ishla bayrog'i qanday vazifani bajaradi?",o:["Drebezg filtri kechikish vaqtini belgilab beradi","Port yo'nalishini kirish yoki chiqish qilib belgilaydi","Harakat yo'nalishini chapga yoki o'ngga belgilaydi","Yuguruvchi olov harakatlanishi yoki to'xtab turishini belgilaydi"]},
- ]
+ ],
+ checks:[{at:2,q:"Pull-up sxemasida o'qilgan qiymat nega inversiyalanadi?",o:["Qiymatni 8 razryaddan 4 razryadgacha kichraytirish uchun","Bosilgan tugma mantiqiy 1 bo'lib, kod tushunarli bo'lsin","TRIS registrini avtomatik ravishda sozlash uchun","Tugma titrashini apparat darajasida yo'qotish uchun"],a:1,e:"k = ~PORTD & 0x0F."},{at:6,q:"Prioritetli ishlovda birinchi mos shart bajarilgach nima bo'ladi?",o:["Dastur to'xtaydi","Oxirgi shart ustun bo'ladi","Barcha shartlar baribir bajariladi","Qolgan shartlar tekshirilmaydi"],a:3,e:"Bu if–else if zanjiri orqali amalga oshiriladi."},{at:12,q:"Matritsa usulida 16 ta tugma nechta liniyaga ulanadi?",o:["4 ta — faqat satrlar uchun","2 ta — faqat satr va ustun uchun","8 ta (4 satr + 4 ustun)","16 ta — har bir tugmaga alohida liniya"],a:2,e:"Satrlarga navbat bilan nol beriladi, ustunlar o'qiladi."},{at:13,q:"Ghosting (soyabon) effektidan qanday saqlanadi?",o:["Portni kirishdan chiqishga o'tkaziladi","Takt chastotasi oshiriladi","Tugmalar soni kamaytiriladi, rezistor qo'shilmaydi","Har bir tugmaga ketma-ket diod qo'yiladi"],a:3,e:"Ghosting bir vaqtda ikki tugma bosilganda paydo bo'ladi."}]
 },
 {
  id:"S1-M12", sem:1, week:12, type:"lecture", no:12,
@@ -2707,7 +2744,8 @@ const LESSONS = [
   {q:"PIC dagi eng ko'p uchraydigan xato nima?",o:["Operatsiya kodini noto'g'ri yozish","FSR registrini nollashni unutish","Bank tanlashni unutish","Buyruq formatini noto'g'ri tanlash"]},
   {q:"TRISB va PORTB registrlari qaysi banklarda joylashgan?",o:["TRISB 0-bankda, PORTB 1-bankda joylashgan","Ikkisi ham 1-bankda joylashgan bo'ladi","Ikkisi ham 0-bankda joylashgan bo'ladi","TRISB 1-bankda, PORTB 0-bankda joylashgan"]},
   {q:"Bank noto'g'ri tanlangan bo'lsa nima sodir bo'ladi?",o:["Dastur mutlaqo boshqa registrni o'zgartirib qo'yadi","Kristall darhol reset holatiga o'tib ketadi","Hech qanday o'zgarish bo'lmaydi, buyruq o'tkazib yuboriladi","Kompilyator xato berib, dastur yig'ilmay qoladi"]},
- ]
+ ],
+ checks:[{at:2,q:"Buyruq qaysi ikki qismdan iborat?",o:["Adres va bayroq maydonlaridan","Operatsiya kodi va operandlardan","Prefiks va suffiks maydonlaridan","Registr va stek maydonlaridan"],a:1,e:"COP nima qilishni, operand nima ustida qilishni bildiradi."},{at:6,q:"PIC16 da f maydoni 7 razryadli bo'lsa, u bevosita nechta yacheykani adreslaydi?",o:["14 ta","256 ta","128 ta","64 ta"],a:2,e:"Qolgan xotira banklar (RP0, RP1) orqali tanlanadi."},{at:10,q:"Bilvosita adreslashda yacheyka adresi qayerda saqlanadi?",o:["Stek cho'qqisida joylashadi","Buyruq kodining ichida qotirib qo'yiladi","FSR registrida, murojaat INDF orqali","W registrida saqlanadi va o'zgarmaydi"],a:2,e:"To'g'ri adreslashda adres buyruqqa qotirilgan bo'ladi."},{at:15,q:"TRISB ni o'zgartirishdan oldin nima qilish shart?",o:["0-bankni tanlash (RP0 = 0)","Uzilishlarni yoqish (GIE = 1)","W registrini tozalash (CLRW)","1-bankni tanlash (RP0 = 1)"],a:3,e:"TRISB 1-bankda, PORTB 0-bankda joylashgan."}]
 },
 {
  id:"S1-A12", sem:1, week:12, type:"practice", no:12,
@@ -2770,7 +2808,8 @@ const LESSONS = [
   {q:"lcd_nibble(0x20) chaqirig'i nimani bajaradi?",o:["Kursorni ikkinchi qator boshiga joylashtiradi","8 bitli rejimga qaytishni amalga oshiradi","Ekranni tozalab, kursorni boshga qaytaradi","4 bitli rejimga o'tishni amalga oshiradi"]},
   {q:"LCD ga son chiqarish uchun nima qilish kerak?",o:["Sonni CGRAM ga yozib, keyin o'qish kerak bo'ladi","Sonni ikkilik ko'rinishga aylantirib uzatish kerak","Sonni bevosita lcd_data funksiyasiga uzatish yetarli","Sonni raqamlarga ajratib, har biriga 0x30 qo'shish kerak"]},
   {q:"lcd_son funksiyasida (n / 10) % 10 ifodasi nimani beradi?",o:["Sonning o'nliklar raqamini ajratib beradi","Sonning birliklar raqamini ajratib beradi","Sonning yuzliklar raqamini ajratib beradi","Sonning butun qiymatini o'zgarishsiz qaytaradi"]},
- ]
+ ],
+ checks:[{at:3,q:"LCD ning RS liniyasi 1 holatda bo'lsa qanday rejim tanlanadi?",o:["Buyruq rejimi tanlanadi","O'qish rejimi tanlanadi","Ma'lumot (belgi) rejimi","Uyqu rejimi tanlanadi"],a:2,e:"RS = 0 — buyruq, RS = 1 — ma'lumot."},{at:7,q:"0x01 (ekranni tozalash) dan keyin kamida qancha kutish kerak?",o:["Kutish shart emas","Kamida 40 µs","Kamida 2 ms","Kamida 1 s"],a:2,e:"Kutilmasa keyingi buyruq yo'qoladi va belgilar buziladi."},{at:13,q:"Sonning raqamini LCD ga chiqarish uchun nima qilinadi?",o:["Raqam ikkilik shaklda uzatiladi va ko'rsatiladi","Raqamdan 0x30 ayiriladi va yoziladi","Raqamga 0x30 qo'shib, ASCII kodi hosil qilinadi","Raqam to'g'ridan-to'g'ri DDRAM ga yoziladi"],a:2,e:"Masalan, 5 + 0x30 = '5' belgisi."}]
 },
 {
  id:"S1-M13", sem:1, week:13, type:"lecture", no:13,
@@ -2837,7 +2876,8 @@ const LESSONS = [
   {q:"PIC16F877A ning maksimal takt chastotasi va mashina sikli qancha?",o:["20 MHz, mashina sikli 200 ns","8 MHz, mashina sikli 500 ns","40 MHz, mashina sikli 100 ns","4 MHz, mashina sikli 1 µs"]},
   {q:"PIC16F877A liniyalarining ko'p vazifaliligi nimada ko'rinadi?",o:["Barcha liniyalar faqat raqamli kirish-chiqish sifatida ishlaydi","PORTA ADC kirishlari, PORTC esa USART va SPI sifatida ishlatiladi","Liniyalar ko'p vazifali emas, har biri bitta vazifaga biriktirilgan","Faqat PORTB liniyalari bir vaqtda ikki vazifa bajaradi"]},
   {q:"PORTA va PORTE liniyalari ishga tushganda qanday rejimda bo'ladi?",o:["Analog rejimda bo'ladi, ADCON1 bilan raqamliga o'tkaziladi","Yuqori qarshilikli holatda bo'lib, hech narsa o'qilmaydi","Chiqish rejimida bo'lib, darhol qiymat yozilishi mumkin","Raqamli rejimda bo'ladi, qo'shimcha sozlash kerak emas"]},
- ]
+ ],
+ checks:[{at:2,q:"Mikroprotsessor bilan mikrokontrollerning asosiy farqi nimada?",o:["Mikrokontrollerning chastotasi GHz da o'lchanadi, quvvat sarfi yuqori","Mikroprotsessor xotirasiz ishlaydi, mikrokontroller esa xotirali","Mikrokontrollerda yadro, xotira, periferiya bitta kristallda","Mikrokontroller faqat 64 bitli bo'lib, GHz chastotada ishlaydi"],a:2,e:"Shuning uchun u bir kristalli mikro-EHM deb ham ataladi."},{at:9,q:"ATF15XX (CPLD) mikrokontrollerdan nimasi bilan farq qiladi?",o:["Faqat C tilida dasturlanadi va kompilyatsiya qilinadi","Javob vaqti dastur uzunligiga bog'liq bo'ladi","Mantiqiy funksiyalarni apparat darajasida parallel bajaradi","Buyruqlarni ketma-ket bajaradi, xuddi mikrokontrollerdagidek"],a:2,e:"Javob vaqti bir necha nanosekund va oldindan aniq."},{at:14,q:"PIC16F877A da dastur xotirasi (Flash) hajmi qancha?",o:["368 bayt SRAM","33 K × 8 bit so'z","8 K × 14 bit so'z","256 bayt EEPROM"],a:2,e:"368 bayt — SRAM, 256 bayt — EEPROM."},{at:17,q:"PORTA ni raqamli kirish sifatida ishlatish uchun nima qilinadi?",o:["TRISA ga 0xFF yoziladi va port o'qiladi","Hech narsa qilish shart emas, port tayyor","OPTION_REG registri o'zgartiriladi","ADCON1 da raqamli rejim o'rnatiladi"],a:3,e:"Ishga tushganda PORTA va PORTE analog rejimda bo'ladi."}]
 },
 {
  id:"S1-A13", sem:1, week:13, type:"practice", no:13,
@@ -2900,7 +2940,8 @@ const LESSONS = [
   {q:"ADC aniqligini oshirish uchun kirishga qanday filtr qo'yiladi?",o:["LC filtr, masalan 1 mH va 10 µF","Faqat 10 kΩ tortuvchi rezistor qo'yiladi","RC filtr, masalan 1 kΩ va 0,1 µF","Faqat himoya diodi parallel qo'yiladi"]},
   {q:"O'rtachalash usuli qanday bajariladi?",o:["Faqat bir marta o'lchab, natijani ikkiga ko'paytirish","Natijani ADRESH registrida saqlab, qayta o'qish","Kanalni almashtirib, ikki kanal natijasini qo'shish","8 yoki 16 marta o'lchab, yig'indini siljitish bilan bo'lish"]},
   {q:"adc_ortacha funksiyasida s >> 3 nimani bildiradi?",o:["Yig'indini 3 ga bo'lishni bildiradi","Yig'indini 8 ga bo'lishni bildiradi","Yig'indini 8 ga ko'paytirishni bildiradi","Yig'indining quyi uch bitini ajratishni bildiradi"]},
- ]
+ ],
+ checks:[{at:2,q:"U_kirish = 2,5 V, Uref = 5 V bo'lsa, 10 razryadli ADC kodi taxminan qancha?",o:["255","511","1023","2500"],a:1,e:"N = 2,5 / 5 · 1023 ≈ 511."},{at:7,q:"Kvantlash qadami 10 razryadli ADC va Uref = 5 V da qancha?",o:["Taxminan 48,8 mV","Taxminan 0,49 mV","Taxminan 5 V","Taxminan 4,88 mV"],a:3,e:"q = 5 V / 1023."},{at:8,q:"Kanal almashtirilgandan keyin nima uchun kamida 20 µs kutiladi?",o:["ADC modulini yoqish va sozlash uchun","Natijani ADRESH registriga ko'chirish uchun","Namuna-saqlash kondensatori zaryadlanishi uchun","Uzilish bayrog'ini tozalash va tekshirish uchun"],a:2,e:"Bu acquisition time deb ataladi."},{at:14,q:"Bir necha o'lchash o'rtachasi nimani yaxshilaydi?",o:["Uref ni o'zgartirib, diapazonni kengaytiradi","Konvertatsiya tezligini bir necha barobar oshiradi","Shovqinni kamaytirib, barqarorlikni oshiradi","ADC razryadliligini 12 bitgacha oshirib beradi"],a:2,e:"8 yoki 16 o'lchash yig'indisini siljitish bilan bo'lish qulay."}]
 },
 {
  id:"S1-M14", sem:1, week:14, type:"lecture", no:14,
@@ -2967,7 +3008,8 @@ const LESSONS = [
   {q:"KR580VM80A da LXI H, 2000H buyrug'i nima qiladi?",o:["HL registr juftligiga 2000H qiymatini yuklaydi","2000H adresiga A registr qiymatini yozib qo'yadi","A akkumulyatorga 2000H adresidagi qiymatni o'qiydi","HL qiymatini bittaga orttirib, keyingi adresga o'tadi"]},
   {q:"KR580VM80A da MOV A, M buyrug'i qanday amalni bajaradi?",o:["A registr qiymatini HL ko'rsatgan yacheykaga yozadi","A va M registrlarini o'zaro almashtirib qo'yadi","HL qiymatini A registriga ko'chirib o'tkazadi","HL ko'rsatgan xotira yacheykasini A ga o'qiydi"]},
   {q:"KR580VM80A buyruqlarining uzunligi va bajarilish vaqti qanday?",o:["Har doim 1 bayt; har doim 4 taktda bajariladi","Har doim 2 bayt; 2 dan 4 gacha taktda bajariladi","Har doim 14 bit; har doim 1 siklda bajariladi","1, 2 yoki 3 bayt; 4 dan 18 gacha taktda bajariladi"]},
- ]
+ ],
+ checks:[{at:3,q:"MOVF f,1 buyrug'i nima uchun ishlatiladi?",o:["Yacheykani W ga ko'chirmasdan o'chirib tashlash uchun","Bankni almashtirib, boshqa registrga o'tish uchun","C bayrog'ini o'rnatish va tozalash uchun","Yacheyka nolligini Z bayrog'i orqali tekshirish uchun"],a:3,e:"Ko'chirish buyruqlaridan faqat MOVF Z ni yangilaydi."},{at:6,q:"RLF buyrug'i aylantirishda C bayrog'ini qanday ishlatadi?",o:["C bayrog'i hamisha 0 bilan to'ldiriladi, chiqqan bit yo'qoladi","C ga ishora biti yoziladi, qolgan bitlar yo'qoladi","C bayrog'i aylantirishda umuman ishtirok etmaydi","Chiqqan bit C ga tushadi, eski C qarama-qarshi chetdan kiradi"],a:3,e:"Shu sababli oldin C ni tozalash odat."},{at:9,q:"RETLW buyrug'i nima uchun qulay?",o:["Uzilishdan qaytadi va GIE ni qayta yoqadi","Dasturni to'xtatib, SLEEP rejimiga o'tkazadi","Stekni to'liq tozalab, dasturni boshiga qaytaradi","W ga konstanta yozib qaytadi — jadval uchun qulay"],a:3,e:"Masalan, 7-segment kodlari jadvali."},{at:13,q:"BTFSS shart bajarilganda necha sikl oladi?",o:["2 sikl","4 sikl","3 sikl","1 sikl"],a:0,e:"Tashlangan buyruq o'rniga NOP bajariladi."},{at:18,q:"KR580VM80A qaysi chet el mikroprotsessorining analogi?",o:["Intel 8080A","MOS 6502","Motorola 6800","Zilog Z80"],a:0,e:"8 razryadli, 78 ta asosiy buyruq."}]
 },
 {
  id:"S1-A14", sem:1, week:14, type:"practice", no:14,
@@ -3033,7 +3075,8 @@ const LESSONS = [
   {q:"PWM chastotasi oshganda nima ortadi?",o:["Yuklamadagi tok qiymati ikki barobar ortadi","O'rtacha kuchlanish avtomatik ravishda ortadi","To'ldirish koeffitsienti avtomatik oshadi","Kalitlash yo'qotishlari ortib boradi"]},
   {q:"Potensiometr bilan dvigatel tezligini boshqarish uchun nima qilinadi?",o:["Timer2 bo'luvchisi har safar qaytadan sozlanadi","ADC dan olingan qiymat pwm_duty funksiyasiga uzatiladi","PR2 registri potensiometr qiymatiga tenglashtiriladi","Potensiometr bevosita CCP1 chiqishiga ulanadi"]},
   {q:"Namunadagi dasturning asosiy sikli nimani amalga oshiradi?",o:["PWM chastotasini uzluksiz oshirib-kamaytirib boradi","To'ldirishni 0 dan 100 % ga va qaytib pasaytirib, yorqinlikni silliq o'zgartiradi","Dvigatelni ikki yo'nalishda navbat bilan aylantiradi","To'ldirishni doimiy 50 % da ushlab, LED ni bir xil yoqadi"]},
- ]
+ ],
+ checks:[{at:1,q:"PWM da o'rtacha kuchlanish nimaga proporsional?",o:["Signal chastotasiga (qanchalik yuqori, shunchalik katta)","Impuls davomiyligiga (to'ldirish koeffitsientiga)","Takt chastotasiga, to'ldirishga emas","Davr uzunligiga, impuls davomiyligiga emas"],a:1,e:"D = 40 %, Ucc = 5 V bo'lsa U = 2 V."},{at:7,q:"PWM chastotasi PIC16F877A da qaysi taymer va registr bilan belgilanadi?",o:["WDT va CLRWDT","Timer1 va T1CON","Timer0 va OPTION_REG","Timer2 va PR2"],a:3,e:"PR2 = fosc / (4·K·fpwm) − 1."},{at:9,q:"10 razryadli to'ldirish qiymatining quyi 2 biti qayerda saqlanadi?",o:["CCPR1H registrining yuqori razryadlarida","T2CON registrining 4- va 5-razryadlarida","CCP1CON ning 4- va 5-razryadlarida","PR2 registrining quyi razryadlarida"],a:2,e:"Yuqori 8 bit CCPR1L da."},{at:16,q:"Induktiv yuklamani (dvigatel, rele) ulashda nima majburiy?",o:["Yuklamani to'g'ridan-to'g'ri portga ulash","Tranzistor kaliti va teskari diod","Yuqori chastotali kvarts","Qo'shimcha pull-up rezistor"],a:1,e:"O'z-o'zidan induksiya EYK i tranzistor va MK ni buzishi mumkin."}]
 },
 {
  id:"S1-M15", sem:1, week:15, type:"lecture", no:15,
@@ -3094,7 +3137,8 @@ const LESSONS = [
   {q:"Garvard arxitekturasining asosiy afzalligi nima?",o:["Stekni dasturiy ko'rinishda, operativ xotirada tashkil etish imkoniyati","Buyruqlar sonini 100 dan oshirish imkoniyati","Xotira hajmini cheksiz kengaytirish imkoniyati","Parallel murojaat imkoniyati va undan kelib chiqadigan tezlik"]},
   {q:"RISC va konveyer birgalikda nimani ta'minlaydi?",o:["Chastotani cheksiz oshirish va issiqlik chiqarishni kamaytirishni","Xotira hajmini ikki barobar oshirib berishni","Buyruqlar sonini avtomatik ko'paytirib borishni","Past chastotada ham barqaror, oldindan hisoblanadigan unumdorlikni"]},
   {q:"CISC va RISC da registrlar soni qanday farq qiladi?",o:["Registrlar soni arxitekturaga bog'liq emas","CISC da kam, RISC da ko'p registr bo'ladi","CISC da ko'p, RISC da kam registr bo'ladi","Ikkisida ham registrlar soni bir xil bo'ladi"]},
- ]
+ ],
+ checks:[{at:3,q:"Fon Neyman to'sig'i nima?",o:["Bitta shina tufayli buyruq va ma'lumotni birga o'qib bo'lmaydi","Takt chastotasining yuqori chegarasi va issiqlik to'sig'i","Xotira hajmining 64 K bilan cheklanishi natijasidagi to'siq va xato","Stek chuqurligining 8 daraja bilan cheklanishi natijasidagi to'siq"],a:0,e:"Garvard sxemasi bu cheklovni ajratilgan shinalar bilan yo'qotadi."},{at:6,q:"PIC16 da buyruq so'zi 14 bitli, ma'lumot yacheykasi 8 bitli. Bu qaysi arxitekturani ko'rsatadi?",o:["Fon Neyman — umumiy xotira","CISC — o'zgaruvchan uzunlik","Konveyersiz arxitektura","Garvard — ajratilgan xotira"],a:3,e:"Bunday farq faqat ajratilgan xotirada mumkin."},{at:14,q:"PIC16 oilasida nechta buyruq bor va ular qanday bajariladi?",o:["100 dan ortiq, buyruq uzunligi o'zgaruvchan va sikli turlicha","35 ta, lekin hammasi ikki siklda bajariladi","78 ta, ularning har biri 4 dan 18 taktgacha","35 ta, o'tishdan tashqari hammasi bir mashina siklida"],a:3,e:"Bu bajarilish vaqtini oldindan hisoblash imkonini beradi."},{at:16,q:"O'tish buyrug'i nima uchun ikki sikl oladi?",o:["Oldindan olingan buyruq yaroqsiz bo'lib, konveyer tozalanadi","Uzilish so'rovi tekshirilgani va kutilgani uchun","Adres 16 razryadli bo'lgani va ikki baytdan iboratligi uchun","Stekka yozish kerak bo'lgani va u sekin bo'lgani uchun"],a:0,e:"PIC da konveyer ikki bosqichli."}]
 },
 {
  id:"S1-A15", sem:1, week:15, type:"practice", no:15,
@@ -3159,7 +3203,8 @@ const LESSONS = [
   {q:"Kalibrlash tuzatmalari qayerga yozib qo'yiladi?",o:["Faqat dastur kodiga qotirib yozib qo'yiladi","Stek sohasiga yoziladi — himoyalangan joy hisoblanadi","SRAM ga yoziladi — tez murojaat uchun qulay bo'ladi","EEPROM ga yoziladi — quvvat uzilganda ham saqlanadi"]},
   {q:"O'lchash aniqligiga qanday omillar ta'sir qiladi?",o:["Faqat LCD indikatorning qator va ustunlar soni","Faqat mikrokontrollerning takt chastotasi qiymati","Uzun simlar, quvvat beqarorligi, datchikning qizishi, issiqlik manbalari","Faqat dastur kodining hajmi va bajarilish tezligi"]},
   {q:"Chegaraviy signalizatsiyada qaysi element majburiy hisoblanadi?",o:["Ikki nuqtali kalibrlash majburiy hisoblanadi","RC filtr majburiy element hisoblanadi","Gisterezis majburiy element hisoblanadi","O'rtachalash majburiy element hisoblanadi"]},
- ]
+ ],
+ checks:[{at:1,q:"Raqamli termometrning to'g'ri bosqichlar tartibi qaysi?",o:["Datchik, ADC, mikrokontrollerda hisoblash, indikator","Datchik, indikator, ADC, mikrokontrollerda hisoblash","ADC, datchik, indikator, mikrokontrollerda hisoblash","Indikator, hisoblash, ADC, datchik, keyin yana indikator"],a:0,e:"Bu tuzilma har qanday o'lchash qurilmasi uchun umumiy."},{at:5,q:"LM35 25 °C da chiqishida qancha kuchlanish beradi?",o:["2,5 V — 100 mV/°C","250 mV","25 V — 1 V/°C","25 mV — 1 mV/°C"],a:1,e:"LM35: 10 mV/°C."},{at:8,q:"Uref ni 2,56 V qilish nimani yaxshilaydi?",o:["Quvvat sarfini nolga tushiradi va datchikni sovutadi","Kvantlash qadamini kichraytirib, aniqlikni oshiradi","O'lchash diapazonini kengaytiradi, aniqlikni emas","ADC tezligini oshiradi va quvvat sarfini kamaytiradi"],a:1,e:"Bitta kod 0,1–0,25 °C ga mos keladi."},{at:12,q:"Signalizatsiyada 2 °C gisterezis nima uchun kerak?",o:["ADC xatosini nolga tushirish va shovqinni yo'qotish uchun","Datchikni qizdirib turish va barqarorlashtirish uchun","Releni tez-tez kalitlanishdan saqlash uchun","LCD yorqinligini sozlash va miltillashni yo'qotish uchun"],a:2,e:"Ulanish va uzilish chegaralari bir-biridan farq qiladi."}]
 },
 {
  id:"S2-M16", sem:2, week:1, type:"lecture", no:16,
@@ -3221,7 +3266,8 @@ const LESSONS = [
   {q:"Yulduz topologiyasi qaysi interfeysda qo'llanadi?",o:["I2C da: barcha qurilmalar umumiy juft simda bo'ladi","UART da: ikki qurilma bevosita bog'lanadi","1-Wire da: qurilmalar bitta simda ketma-ket ulanadi","SPI da: markaziy qurilma har bir slave bilan alohida liniya orqali"]},
   {q:"Shina topologiyasi qaysi interfeyslarga xos?",o:["I2C, CAN va RS-485 ga xos: umumiy juft sim, adres bilan ajratiladi","Faqat UART ga xos: ikki qurilma bevosita ulanadi","Faqat SPI ga xos: har bir slave alohida liniya bilan","Faqat USB ga xos: markaziy xab orqali tashkil etiladi"]},
   {q:"Datchiklar uchun amalda qaysi interfeyslar tanlanadi?",o:["Faqat parallel interfeys tanlanadi","Ko'pincha I2C yoki 1-Wire tanlanadi","Faqat CAN interfeysi tanlanadi","Faqat USB interfeysi tanlanadi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L1", sem:2, week:1, type:"lab", no:1,
@@ -3281,7 +3327,8 @@ const LESSONS = [
   {q:"digitalWrite(pin, HIGH) PIC dagi qaysi amalga mos keladi?",o:["PORTBbits.RB0 = 1 ko'rinishidagi yozishga mos keladi","TRISBbits.TRISB0 = 0 ko'rinishidagi sozlashga","CCP modulini PWM rejimida sozlashga mos keladi","PORTDbits.RD0 ni o'qish amaliga mos keladi"]},
   {q:"analogWrite(pin, d) funksiyasi PIC da nimaga to'g'ri keladi?",o:["TRIS registrida yo'nalishni belgilashga to'g'ri keladi","__delay_ms kechikish funksiyasiga to'g'ri keladi","ADC ni sozlab, GO/DONE bilan o'qishga to'g'ri keladi","CCP modulini PWM rejimida sozlashga to'g'ri keladi"]},
   {q:"Namunadagi dasturda Serial.begin(9600) nima qiladi?",o:["LED ni chiqish rejimiga o'tkazib qo'yadi","Kompyuter bilan aloqani 9600 bod tezlikda ochadi","ADC ni 9600 Hz chastotada sozlab qo'yadi","9600 ms kechikish hosil qilib beradi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M17", sem:2, week:2, type:"lecture", no:17,
@@ -3343,7 +3390,8 @@ const LESSONS = [
   {q:"EEPROM ga bitta baytni yozish qancha vaqt oladi?",o:["Bir lahzada, vaqt talab qilmaydi","4–10 µs davom etadi","4–10 ms davom etadi","4–10 s davom etadi"]},
   {q:"EEPROM ning yozish sikllari soni qanday chegaralangan?",o:["Odatda 100 000 dan 1 000 000 gacha","Cheksiz, hech qanday chegara mavjud emas","Odatda 100 dan 1000 gacha","Faqat bir marta yozish mumkin bo'ladi"]},
   {q:"EEPROM ga yozishdan oldin nima qilish tavsiya etiladi?",o:["Uzilishlarni butunlay o'chirib qo'yish talab etiladi","Takt chastotasini vaqtincha pasaytirib qo'yish kerak","Joriy qiymatni o'qib solishtirish, o'zgarmagan bo'lsa yozmaslik","Butun EEPROM ni to'liq nollab chiqish kerak bo'ladi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L2", sem:2, week:2, type:"lab", no:2,
@@ -3402,7 +3450,8 @@ const LESSONS = [
   {q:"Sakkizta LED Arduino da qaysi chiqishlarga ulanadi (namunada)?",o:["A0–A5 kirishlariga ulanadi","D2–D9 chiqishlariga ulanadi","D10–D13 chiqishlariga ulanadi","D0–D7 chiqishlariga ulanadi"]},
   {q:"LED ni D0 va D1 chiqishlariga ulamaslik nima uchun ma'qul?",o:["Ular Serial port (RX va TX) liniyalari hisoblanadi","Ular analog kirish sifatida band bo'lib turadi","Ularning maksimal toki boshqalardan kichik","Ular PWM ni qo'llamaydigan yagona chiqishlar"]},
   {q:"Namunadagi hisoblagich dasturida delay(300) nima uchun qo'yilgan?",o:["Har bir qiymatni ko'rish va kuzatish uchun qo'yilgan","Xotira sarfini kamaytirish uchun qo'yilgan","Serial port tezligini sozlash uchun qo'yilgan","LED tokini cheklash maqsadida qo'yilgan"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M18", sem:2, week:3, type:"lecture", no:18,
@@ -3464,7 +3513,8 @@ const LESSONS = [
   {q:"Dinamik indikatsiyada taymer qanday rol o'ynaydi?",o:["Razryadlarni navbatlash uchun ishlatiladi","Segment kodlarini jadvaldan o'qib beradi","Indikator yorqinligini analog boshqaradi","Indikatorga quvvat berib, tokni cheklaydi"]},
   {q:"Taymer yordamida qanday o'lchov bajarish mumkin?",o:["Faqat ta'minot kuchlanishini o'lchash mumkin","Faqat dastur hajmini o'lchash mumkin bo'ladi","Chastota va impuls davomiyligini o'lchash mumkin","Faqat xotira sarfini o'lchash mumkin bo'ladi"]},
   {q:"Interval davomiyligi qanday uch parametr bilan belgilanadi?",o:["Faqat takt chastotasi va dastur hajmi bilan","Razryadlilik, bo'luvchi va preload qiymati bilan","Faqat uzilish ruxsati va bayroq holati bilan","Faqat bank tanlash va adres bilan belgilanadi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L3", sem:2, week:3, type:"lab", no:3,
@@ -3525,7 +3575,8 @@ const LESSONS = [
   {q:"Real qurilmalar uchun asosiy yondashuv qaysi hisoblanadi?",o:["millis() asosida kutish — protsessorni band qilmaydi","delay() asosida kutish — kodi soddaroq bo'ladi","Faqat uzilishlar — boshqa usul ishlatilmaydi","Faqat apparat filtr — dasturiy yechim kerak emas"]},
   {q:"INPUT_PULLUP rejimida bosilgan holatni kodda aniq izohlash nima uchun muhim?",o:["Izohlar dastur hajmini kamaytirib yuboradi","Mantiq teskari bo'lgani uchun xatolarning oldini oladi","Kompilyator izohlarni tekshirib, xato berib qo'yadi","Izohsiz dastur umuman yig'ilmay qoladi"]},
   {q:"digitalRead funksiyasi nimani qaytaradi?",o:["Kirish liniyasidagi mantiqiy darajani (HIGH yoki LOW)","Liniyaning kirish yoki chiqish rejimini","Chiqish liniyasiga yozilgan oxirgi qiymatni","Kirish liniyasidagi analog kuchlanish qiymatini"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M19", sem:2, week:4, type:"lecture", no:19,
@@ -3585,7 +3636,8 @@ const LESSONS = [
   {q:"Jitter nima deb ataladi?",o:["Javob vaqtining takrorlanishdan takrorlanishga o'zgarishi","Datchik signalidagi doimiy nol siljishi","Uzilish bayrog'ining tozalanmay qolishi holati","Javob vaqtining doimiy va o'zgarmas qiymati"]},
   {q:"Uzun uzilish xizmat qism dasturi nimaga olib keladi?",o:["Boshqa hodisalarning javob vaqtini oshiradi","Dastur hajmini sezilarli kamaytirib yuboradi","Barcha hodisalarning javob vaqtini kamaytiradi","Taymer bayroqlarini avtomatik tozalab qo'yadi"]},
   {q:"ISR (uzilish xizmat qism dasturi) ichida nima qilish tavsiya etiladi?",o:["Barcha hisob-kitob va indikatsiyani to'liq bajarish","Uzoq kechikishlar qo'yib, vaqtni aniq o'lchash","Serial port orqali uzun xabarlar yuborib turish","Faqat bayroq o'rnatish yoki qiymat o'qish, ishlov loop da"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L4", sem:2, week:4, type:"lab", no:4,
@@ -3643,7 +3695,8 @@ const LESSONS = [
   {q:"Vaqtni bevosita taqqoslash nima uchun xato hisoblanadi?",o:["unsigned long turi taqqoslashni qo'llamaydi","Taqqoslash amali juda ko'p vaqt talab qilib qoladi","Taqqoslash natijasi har doim nolga teng bo'ladi","millis() to'lib ketganda shart noto'g'ri ishlab qoladi"]},
   {q:"Oraliq natijani saqlash funksiyasi nima deb ataladi?",o:["Filtr funksiyasi deb ataladi","Lap funksiyasi deb ataladi","Toggle funksiyasi deb ataladi","Reset funksiyasi deb ataladi"]},
   {q:"INPUT_PULLUP rejimida tugmalar sekundomerda qanday sozlanadi?",o:["pinMode(TUGMA, OUTPUT) bilan sozlanadi","pinMode(TUGMA, INPUT_PULLUP) bilan sozlanadi","pinMode(TUGMA, INPUT) bilan va tashqi rezistor bilan","Sozlash umuman talab etilmaydi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M20", sem:2, week:5, type:"lecture", no:20,
@@ -3705,7 +3758,8 @@ const LESSONS = [
   {q:"Uzilishda ishlatiladigan o'zgaruvchilar qanday e'lon qilinadi?",o:["register deb e'lon qilinadi","volatile deb e'lon qilinadi","static deb e'lon qilinadi","const deb e'lon qilinadi"]},
   {q:"Loyihalashda tekshiriladigan asosiy resurs sharti qanday?",o:["Faqat global o'zgaruvchilar SRAM dan kichik bo'lsa yetarli","Kod + jadvallar ≤ Flash; global + stek + bufer ≤ SRAM","Kod + stek ≤ SRAM; jadvallar + bufer ≤ EEPROM","Faqat kod hajmi Flash dan kichik bo'lishi yetarli"]},
   {q:"Kod sifati bo'yicha \"sehrli sonlar\" haqida qanday qoida bor?",o:["Ularni faqat global o'zgaruvchilarga yozib qo'yish kerak","Ularni faqat izohlarda tushuntirib qo'yish yetarli","Ularni nomlangan doimiylar bilan almashtirish kerak","Ularni imkon qadar ko'proq ishlatish tavsiya etiladi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L5", sem:2, week:5, type:"lab", no:5,
@@ -3743,7 +3797,8 @@ const LESSONS = [
   {q:"TIMSK1 registri nimani boshqaradi?",o:["Bo'luvchini","Taymer uzilishiga ruxsatni","Portni","ADC ni"]},
   {q:"noInterrupts() funksiyasi nima qiladi?",o:["Taymerni o'chiradi","Uzilishlarni vaqtincha taqiqlaydi","Portni tozalaydi","Dasturni to'xtatadi"]},
   {q:"Apparat taymer uzilishining millis() dan afzalligi nimada?",o:["Kod qisqaroq","Aniqroq va protsessor yuklamasidan mustaqil ishlashi","Xotira tejashi","Tugma kerak emasligi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M21", sem:2, week:6, type:"lecture", no:21,
@@ -3785,7 +3840,8 @@ const LESSONS = [
   {q:"Drayverlar darajasi nimani bajaradi?",o:["Foydalanuvchi menyusini","Periferiya bilan bevosita ishlashni","Matematik hisoblarni","Yuklashni"]},
   {q:"Mikrokontroller almashtirilganda qaysi daraja qayta yoziladi?",o:["Amaliy daraja","Drayverlar darajasi","Interfeys darajasi","Hammasi"]},
   {q:"Maqsadli qurilma bo'lmasa uning o'rnini nima bosadi?",o:["Boshqa mikrokontroller","Modellashtirish muhiti (Proteus, simulyator)","Kompilyator","Programmator"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L6", sem:2, week:6, type:"lab", no:6,
@@ -3823,7 +3879,8 @@ const LESSONS = [
   {q:"Yashil miltillash fazasi nima vazifani bajaradi?",o:["Chiroqni tejash","Yashil tugayotganini oldindan ogohlantirish","Tugmani tekshirish","Vaqt o'lchash"]},
   {q:"struct Faza tuzilmasi nima uchun ishlatilgan?",o:["Tezlik uchun","Bir fazaga oid chiroq holatlari va vaqtni bitta yozuvda saqlash uchun","Xotira uchun","Uzilish uchun"]},
   {q:"Fazalar jadvaliga yangi faza qo'shish uchun nima o'zgartiriladi?",o:["Butun mantiq","Faqat massiv va FAZA_SONI qiymati","Portlar","Setup funksiyasi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M22", sem:2, week:7, type:"lecture", no:22,
@@ -3868,7 +3925,8 @@ const LESSONS = [
   {q:"vTaskDelay() delay() dan nimasi bilan farq qiladi?",o:["Aniqroq","Protsessorni bo'shatib, boshqa vazifalarga imkon beradi","Tezroq","Xotira tejaydi"]},
   {q:"RTOS da SRAM sarfi nimaga proporsional ortadi?",o:["Kod hajmiga","Vazifalar soniga (har birining o'z steki bor)","Chastotaga","Uzilishlar soniga"]},
   {q:"Bootloader qanday servis vazifasini bajaradi?",o:["Xotirani tozalaydi","Interfeys orqali kelgan yangi dasturni Flash ga yozadi","Datchiklarni o'qiydi","Ekranga chiqaradi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L7", sem:2, week:7, type:"lab", no:7,
@@ -3911,7 +3969,8 @@ const LESSONS = [
   {q:"Ghosting (soya) effekti nima uchun paydo bo'ladi?",o:["Tok katta bo'lgani uchun","Segment kodi o'zgartirilayotganda razryad yoqilgan bo'lgani uchun","Chastota past bo'lgani uchun","Rezistor kichik bo'lgani uchun"]},
   {q:"Dinamik indikatsiyada o'rtacha yorqinlik nega kamayadi?",o:["Tok kam bo'lgani uchun","Har bir razryad vaqtning 1/N qismida yongani uchun","Rezistor kattaligi uchun","Kod noto'g'ri bo'lgani uchun"]},
   {q:"Ko'p razryadli indikatorda razryadlar nima orqali ulanadi?",o:["Bevosita port chiqishiga","Tranzistor kalitlari orqali","Rezistor orqali faqat","Kondensator orqali"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M23", sem:2, week:8, type:"lecture", no:23,
@@ -3956,7 +4015,8 @@ const LESSONS = [
   {q:"PLL nima uchun ishlatiladi?",o:["Kuchlanishni oshirish","Takt chastotasini ko'paytirish","Xotirani kengaytirish","Uzilish yaratish"]},
   {q:"Power-down rejimida nima to'xtaydi?",o:["Faqat yadro","Yadro va generator","Faqat periferiya","Hech nima"]},
   {q:"Reset sababini aniqlash nima uchun foydali?",o:["Tezlikni oshirish uchun","Nosozlik manbasini topish uchun (masalan watchdog reseti)","Xotira tejash uchun","Chastotani o'lchash uchun"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L8", sem:2, week:8, type:"lab", no:8,
@@ -3998,7 +4058,8 @@ const LESSONS = [
   {q:"'7' belgisidan 7 sonini olish uchun nima qilinadi?",o:["'0' qo'shiladi","'0' ayiriladi","2 ga bo'linadi","Inversiyalanadi"]},
   {q:"Kiritilgan raqamlardan sonni yig'ish formulasi qanday?",o:["son = son + raqam","son = son * 10 + raqam","son = raqam","son = son / 10"]},
   {q:"N ta tugma uchun matritsada minimal liniyalar soni qanday baholanadi?",o:["N","N/2","2·√N","2N"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M24", sem:2, week:9, type:"lecture", no:24,
@@ -4039,7 +4100,8 @@ const LESSONS = [
   {q:"PIC16F877A-I/P dagi I harfi nimani anglatadi?",o:["Ichki generator","Sanoat harorat diapazoni (−40…+85 °C)","Interfeys turi","Ishlab chiqaruvchi"]},
   {q:"Nima uchun PIC da dastur vaqtini aniq hisoblash mumkin?",o:["Chastota yuqori bo'lgani uchun","Buyruqlar bir xil formatda va asosan bir siklda bajarilgani uchun","Xotira katta bo'lgani uchun","Konveyer yo'qligi uchun"]},
   {q:"CCP moduli qanday vazifalarni bajaradi?",o:["Faqat ADC","Impulsni o'lchash (capture), solishtirish va PWM","Faqat UART","Faqat xotira"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L9", sem:2, week:9, type:"lab", no:9,
@@ -4083,7 +4145,8 @@ const LESSONS = [
   {q:"\"100\" dan keyin \"99\" yozilsa ekranda nima ko'rinadi?",o:["99","990","100","Bo'sh"]},
   {q:"Bu muammoni qanday bartaraf etiladi?",o:["Kontrastni oshirish bilan","Qiymatdan keyin bo'shliq chiqarish yoki qatorni qayta yozish bilan","Chastotani oshirish bilan","Kursorni o'chirish bilan"]},
   {q:"LCD da hech nima ko'rinmasa birinchi navbatda nima tekshiriladi?",o:["Dastur mantiqini","Kontrast (VO) sozlamasini","Kvartsni","Uzilishni"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M25", sem:2, week:10, type:"lecture", no:25,
@@ -4127,7 +4190,8 @@ const LESSONS = [
   {q:"TRISB registri qaysi bankda joylashgan?",o:["0-bank","1-bank","Ikkalasida","EEPROM da"]},
   {q:"EEPROM ga yozishda 0x55 va 0xAA kodlari nima uchun yuboriladi?",o:["Adres uchun","Tasodifiy yozilishdan himoya ketma-ketligi","Tezlik uchun","Nazorat yig'indisi uchun"]},
   {q:"PIC16F84A qanday masalalar uchun mos?",o:["Video qayta ishlash","Sodda boshqarish va o'quv masalalari","Katta ma'lumotlar bazasi","Tarmoq serveri"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L10", sem:2, week:10, type:"lab", no:10,
@@ -4177,7 +4241,8 @@ const LESSONS = [
   {q:"MAX232 nima uchun kerak?",o:["Tezlikni oshirish","TTL va RS-232 darajalarini o'zaro moslashtirish","Xotira kengaytirish","Uzilish yaratish"]},
   {q:"Ikki platani UART orqali ulashda nima majburiy?",o:["Faqat TX–TX ulanishi","TX–RX kesishgan ulanish va umumiy sim (GND)","Bir xil quvvat manbai","Kvarts bir xilligi"]},
   {q:"Nazorat yig'indisi nima uchun qo'shiladi?",o:["Tezlikni oshirish uchun","Uzatishda buzilgan kadrni aniqlash uchun","Xotira tejash uchun","Adres berish uchun"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M26", sem:2, week:11, type:"lecture", no:26,
@@ -4222,7 +4287,8 @@ const LESSONS = [
   {q:"f = 4 MHz da 10 ta bir sikli buyruq qancha vaqt oladi?",o:["1 µs","10 µs","40 µs","100 µs"]},
   {q:"DECFSZ buyrug'i nima uchun ishlatiladi?",o:["Portni o'qish","Sikl hisoblagichini kamaytirib, nolga yetganda chiqish","Bayroq tozalash","Xotira yozish"]},
   {q:"ADDWF PCL,1 orqali jadvalga sakrashda nimaga e'tibor berish kerak?",o:["Chastotaga","Jadval sahifa chegarasidan o'tmasligiga (PCLATH)","Bank tanlashga","Uzilishga"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L11", sem:2, week:11, type:"lab", no:11,
@@ -4268,7 +4334,8 @@ const LESSONS = [
   {q:"Bitta 1-Wire liniyasiga bir necha datchik ulash mumkinmi?",o:["Yo'q","Ha, har birining noyob seriya raqami bor","Faqat ikkitasi","Faqat qisqa masofada"]},
   {q:"Ikki nuqtali kalibrlash nimani aniqlaydi?",o:["Faqat nol siljishini","Nol siljishi va koeffitsient xatosini","Shovqin darajasini","Inersiyani"]},
   {q:"Datchikning issiqlik inersiyasi nimaga olib keladi?",o:["Ko'rsatkich haqiqiy haroratdan kechikishiga","Shovqinga","Nol siljishiga","Diapazon o'zgarishiga"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M27", sem:2, week:12, type:"lecture", no:27,
@@ -4310,7 +4377,8 @@ const LESSONS = [
   {q:"Nosozlik qidirishda birinchi navbatda nima tekshiriladi?",o:["Dastur mantiqini","Quvvat kuchlanishi va reset liniyasini","Kompilyator versiyasini","Interfeysni"]},
   {q:"Apparat qismi sog'ligini qanday tez tasdiqlash mumkin?",o:["Butun dasturni yuklab","Eng sodda LED miltillash dasturini yuklab","Ossillografsiz","Konfiguratsiyani o'chirib"]},
   {q:"Nima uchun bir vaqtda faqat bitta o'zgarish kiritiladi?",o:["Tezlik uchun","Nosozlik yo'qolganda uning sababini aniq bilish uchun","Xotira uchun","Standart talabi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L12", sem:2, week:12, type:"lab", no:12,
@@ -4359,7 +4427,8 @@ const LESSONS = [
   {q:"n marta o'rtachalashda tasodifiy xato qanday kamayadi?",o:["n marta","√n marta","n² marta","O'zgarmaydi"]},
   {q:"analogRead() taxminan qancha davom etadi?",o:["1 µs","100 µs","1 ms","10 ms"]},
   {q:"Aliasing qachon yuzaga keladi?",o:["Opora past bo'lganda","Diskretlash chastotasi signal chastotasining ikki barobaridan kam bo'lganda","Shovqin ko'p bo'lganda","O'rtachalashda"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M28", sem:2, week:13, type:"lecture", no:28,
@@ -4401,7 +4470,8 @@ const LESSONS = [
   {q:"Loyihalashda qancha resurs zaxirasi tavsiya etiladi?",o:["0 %","10 %","30 %","70 %"]},
   {q:"Dasturiy qismni darajalarga bo'lish nima beradi?",o:["Tezlikni","MK almashtirilganda faqat drayverlarni qayta yozish imkonini","Xotira tejashni","Aniqlikni"]},
   {q:"Sinov bayonnomasida nima qayd etiladi?",o:["Faqat narx","Sinov sharoiti va olingan natijalar","Faqat sxema","Kod hajmi"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L13", sem:2, week:13, type:"lab", no:13,
@@ -4449,7 +4519,8 @@ const LESSONS = [
   {q:"To'ldirish koeffitsienti qanday hisoblanadi?",o:["t_yuqori / T · 100 %","T / t_yuqori","t_past · T","1 / T"]},
   {q:"Shovqinli sinus signalni sanashdan oldin nima qilish kerak?",o:["Kuchaytirish","Shmitt trigger yoki komparator bilan to'g'ri burchakli shaklga keltirish","Filtrlash faqat","Hech nima"]},
   {q:"Juda yuqori chastotalarda nima ishlatish kerak?",o:["Uzilish orqali sanash","Apparat taymer-hisoblagich kirishi","pulseIn","ADC"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M29", sem:2, week:14, type:"lecture", no:29,
@@ -4492,7 +4563,8 @@ const LESSONS = [
   {q:"Superskalyar protsessor nimani anglatadi?",o:["Bir taktda bir necha buyruq bajarilishini","Ko'p xotirani","Yuqori chastotani","Kichik o'lchamni"]},
   {q:"Kompyuter mikrokontrollerdan qaysi jihati bilan farq qiladi?",o:["Real vaqt kafolatini bermasligi","Tezroq ishga tushishi","Kam quvvat sarflashi","Kichikligi"]},
   {q:"Aniq vaqtli boshqarish vazifasi kimga topshiriladi?",o:["Kompyuterga","Mikrokontrollerga","Video adapterga","Diskka"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L14", sem:2, week:14, type:"lab", no:14,
@@ -4539,7 +4611,8 @@ const LESSONS = [
   {q:"Bufer to'lib ketishining oldini qanday olish mumkin?",o:["Tezlikni oshirish","Blokli uzatish va tasdiqlash (javob kutish)","Buferni o'chirish","Kabelni almashtirish"]},
   {q:"USB 2.0 porti odatda qancha tok bera oladi?",o:["100 mA","500 mA","2 A","5 A"]},
   {q:"Amaliy uzatish tezligi nima uchun nazariydan past bo'ladi?",o:["Kabel uzunligi tufayli","Kadr qo'shimcha bitlari va bufer kechikishlari tufayli","Quvvat yetmagani uchun","Xotira kamligi uchun"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-M30", sem:2, week:15, type:"lecture", no:30,
@@ -4583,7 +4656,8 @@ const LESSONS = [
   {q:"Magistrallar rivojlanishining umumiy yo'nalishi qanday?",o:["Parallel shinalarni kengaytirish","Parallel shinadan ketma-ket differensial liniyalarga o'tish","Chastotani kamaytirish","Analogga qaytish"]},
   {q:"Parallel magistralda chastotani oshirishga nima to'sqinlik qiladi?",o:["Quvvat sarfi","Razryadlar orasidagi vaqt nomuvofiqligi","Adres shinasi","Uzilishlar"]},
   {q:"Mikrokontrollerni kompyuterga ulashning eng sodda yo'li qaysi?",o:["ISA kartasi orqali","USB-UART o'zgartirgich orqali","PCI Express orqali","AGP orqali"]},
- ]
+ ],
+ checks:[]
 },
 {
  id:"S2-L15", sem:2, week:15, type:"lab", no:15,
@@ -4631,7 +4705,8 @@ const LESSONS = [
   {q:"Kod doim 0 yoki 1023 da qotib qolsa bu nimani bildiradi?",o:["Normal ishlashni","Datchik uzilgan yoki tutashgan bo'lishi mumkinligini","Yuqori konsentratsiyani","Qizish davom etayotganini"]},
   {q:"Chegara qiymati qanday belgilanadi?",o:["Tasodifiy","Toza havo darajasidan ma'lum foizga yuqori qilib","Har doim 512","Maksimal qiymatga teng"]},
   {q:"Ushbu qurilmaning maqomi qanday?",o:["Sertifikatlangan xavfsizlik signalizatori","O'quv maketi, sertifikatlangan signalizator o'rnini bosmaydi","Sanoat o'lchash asbobi","Etalon qurilma"]},
- ]
+ ],
+ checks:[]
 },
 ];
 
@@ -5051,7 +5126,14 @@ async function cloudPullAll(){
 /* ---------- talaba uchun: o'z ma'lumotini tortib olish ---------- */
 async function cloudPullMe(login, pw){
   const r = await Cloud.raw("mening", { login, pw });
-  if(r.data){ S.data[login] = Object.assign(userData(login), r.data); }
+  if(r.data){
+    const saqla={}; const eski=userData(login).progress||{};
+    const oqi={};
+    Object.keys(eski).forEach(id=>{ if(eski[id] && eski[id].mashq) saqla[id]=eski[id].mashq; if(eski[id] && eski[id].read) oqi[id]=eski[id].read; });
+    S.data[login] = Object.assign(userData(login), r.data);
+    Object.keys(saqla).forEach(id=>{ lp(login,id).mashq = saqla[id]; });
+    Object.keys(oqi).forEach(id=>{ lp(login,id).read = oqi[id]; });
+  }
   if(r.access){ S.access.g = r.access.g || {}; S.access.u[login] = (r.access.u||{})[login] || {}; }
   save();
   return r;
@@ -5095,7 +5177,8 @@ const byId = id => LESSONS.find(l=>l.id===id);
 function lessonState(login,id){
   const p=userData(login).progress[id];
   if(!p) return "none";
-  if(p.test && p.test.score>=p.test.total*0.6) return "done";
+  if(BAHOLI()){ if(p.test && p.test.score>=p.test.total*0.6) return "done"; }
+  else if(p.mashq && p.mashq.pct>=60) return "done";
   if(p.opened) return "part";
   return "none";
 }
@@ -5118,12 +5201,12 @@ function progressOf(login,sem){
 }
 function avgScore(login){
   const d=userData(login); let t=0,n=0;
-  Object.values(d.progress).forEach(p=>{ if(p.test){ t+=p.test.score/p.test.total*100; n++; } });
+  Object.values(d.progress).forEach(p=>{ const q=tn(p); if(q){ t+=q.score/q.total*100; n++; } });
   return n? Math.round(t/n):0;
 }
 function typeAvg(login,type){
   const d=userData(login); let t=0,n=0;
-  LESSONS.filter(l=>l.type===type).forEach(l=>{ const p=d.progress[l.id]; if(p&&p.test){ t+=p.test.score/p.test.total*100; n++; } });
+  LESSONS.filter(l=>l.type===type).forEach(l=>{ const q=tn(d.progress[l.id]); if(q){ t+=q.score/q.total*100; n++; } });
   return n?Math.round(t/n):0;
 }
 
@@ -5304,7 +5387,7 @@ function afterRegister(){
 
 function vDash(){
   const u=me(); const d=userData(u.login);
-  const done=Object.values(d.progress).filter(p=>p.test).length;
+  const done=Object.values(d.progress).filter(p=>tn(p)).length;
   const next=LESSONS.find(l=>lessonState(u.login,l.id)!=="done");
   return page(`<h1>Salom, ${esc(u.ism)}</h1><p class="sub">${esc(u.guruh)} guruhi · o'quv jarayoni holati</p>
    <div class="grid g3">
@@ -5348,6 +5431,64 @@ function afterSem(){
   const f=$(".wbody"); if(f) f.classList.remove("hide");
 }
 
+
+/* ---------- O'QISH NAZORATI (serverga yuk tushmaydi: hammasi brauzerda) ---------- */
+const nazoratSoni = l => (l && l.checks) ? l.checks.length : 0;
+const nazoratOtgan = (login,l) => { if(isAdmin()) return nazoratSoni(l); const p=lp(login,l.id); return Math.min(p.read||0, nazoratSoni(l)); };
+const nazoratTugagan = (login,l) => isAdmin() || nazoratOtgan(login,l) >= nazoratSoni(l);
+function segmentli(l, otgan){
+  const ch=l.checks||[]; if(!ch.length) return blocks2html(l.body);
+  let h="", from=0;
+  ch.forEach((c,k)=>{
+    h+=`<section class="seg ${k>otgan?"seglock":""}" data-seg="${k}">${blocks2html(l.body.slice(from,c.at+1))}`;
+    if(k<otgan) h+=`<div class="chk done"><b>✓ O'qish nazorati o'tildi</b></div>`;
+    else if(k===otgan) h+=chkHtml(c,k,ch.length);
+    h+=`</section>`; from=c.at+1;
+  });
+  return h+`<section class="seg tail ${otgan<ch.length?"seglock":""}" data-seg="${ch.length}">${blocks2html(l.body.slice(from))}`+"@@TAIL@@"+`</section>`;
+}
+function chkHtml(c,k,n){
+  return `<div class="chk" data-k="${k}"><div class="chkh">O'qish nazorati · ${k+1} / ${n}</div>
+    <p class="chkq">${esc(c.q)}</p>
+    ${c.o.map((o,i)=>`<button class="opt" data-v="${i}">${esc(o)}</button>`).join("")}
+    <div class="chkm"></div></div>`;
+}
+function nazoratUlash(l){
+  const u=me(), p=lp(u.login,l.id), ch=l.checks||[];
+  $$(".chk[data-k]").forEach(box=>{
+    const k=+box.dataset.k, c=ch[k];
+    $$(".opt",box).forEach(btn=>btn.onclick=()=>{
+      const v=+btn.dataset.v, m=$(".chkm",box);
+      if(v===c.a){
+        $$(".opt",box).forEach(x=>x.disabled=true); btn.classList.add("ok");
+        p.read=Math.max(p.read||0,k+1); save();
+        m.innerHTML=`<div class="msg ok">To'g'ri. ${esc(c.e||"")}</div>`;
+        const next=$(`.seg[data-seg="${k+1}"]`);
+        if(next){ next.classList.remove("seglock"); if(next.scrollIntoView) next.scrollIntoView({behavior:"smooth",block:"start"}); }
+        box.classList.add("done");
+        if(k+1<ch.length){ const ns=$(`.seg[data-seg="${k+1}"]`); if(ns && !$(".chk",ns)){ ns.insertAdjacentHTML("beforeend",chkHtml(ch[k+1],k+1,ch.length)); nazoratUlash(l); } }
+        else { const ti=$("#tichki"); if(ti){ ti.innerHTML=testIchki(u,l,p,darsOchiq(u.login,l.id)); const t=$("#totest"); if(t) t.onclick=()=>go("#/test/"+l.id); } toast("Barcha nazoratlar o'tildi"); }
+      } else {
+        btn.classList.add("bad"); btn.disabled=true;
+        m.innerHTML=`<div class="msg warn">Noto'g'ri. Yuqoridagi matnni qayta o'qib chiqing va yana urinib ko'ring.</div>`;
+      }
+    });
+  });
+}
+function testIchki(u,l,p,och){
+  const id=l.id;
+  if(!nazoratTugagan(u.login,l)) return `<div class="msg warn" style="margin:0">Testga o'tish uchun darsdagi <b>o'qish nazoratlari</b> savollariga javob bering: <b>${nazoratOtgan(u.login,l)} / ${nazoratSoni(l)}</b>. Har bir bo'lim oxiridagi savolga to'g'ri javob bersangiz, keyingi bo'lim ochiladi.</div>`;
+  return `${!och ? `<div class="empty" style="margin:0">Test hozir yopiq. O'qituvchi darsni ochgandan keyin bu yerda test paydo bo'ladi.</div>`
+     : !BAHOLI() ? `<p class="sub" style="margin-bottom:12px">${p.mashq?`Mashq natijasi: <b style="color:var(--ink)">${p.mashq.score}/${p.mashq.total}</b> · ${dstr(p.mashq.date)} · urinishlar: ${p.mashq.attempts}`:`Mashq testi: savollar bankdan tasodifiy tanlanadi, har bir javobdan keyin izoh ko'rsatiladi.`}
+        Bu test <b>bahoga ta'sir qilmaydi</b> va istagancha takrorlanadi.</p>
+       <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="totest">${p.mashq?"Mashqni qayta ishlash":"Mashqni boshlash"}</button>
+       <a class="btn ghost" href="${QUIZ_URL}" target="_blank" rel="noopener">Baholanuvchi test — QuizUz</a></div>
+       <p class="hint" style="margin-top:10px">Baholanadigan test o'qituvchi bergan kod bilan QuizUz platformasida o'tkaziladi.</p>` : `
+     <p class="sub" style="margin-bottom:12px">${p.test?`Natija: <b style="color:var(--ink)">${p.test.score}/${p.test.total}</b> · ${dstr(p.test.date)} · urinishlar: ${p.test.attempts}`:`Savollar bankdan tasodifiy tanlanadi va birma-bir beriladi. Test bir marta topshiriladi, har bir javobdan keyin izoh ko'rsatiladi.`}</p>
+     ${(!p.test || qaytaRuxsat(u.login,id))
+       ? `<button class="btn" id="totest">${p.test?"Qayta topshirish (ruxsat berilgan)":"Testni boshlash"}</button>`
+       : `<div class="msg ok" style="margin:0">Test topshirilgan. Qayta topshirish uchun o'qituvchi ruxsati kerak.</div>`}`}`;
+}
 function vLesson(id){
   const l=byId(id); if(!l) return page(`<div class="card"><div class="empty">Bunday dars topilmadi.</div></div>`);
   const u=me();
@@ -5371,16 +5512,12 @@ function vLesson(id){
     ${l.outcomes?`<h2>O'quv natijalari</h2><ul>${l.outcomes.map(o=>`<li>${esc(o)}</li>`).join("")}</ul>`:""}
     ${l.equip?`<h2>Kerakli jihozlar</h2><ul>${l.equip.map(o=>`<li>${esc(o)}</li>`).join("")}</ul>`:""}
     ${l.plan?`<h2>Reja</h2><ol>${l.plan.map(o=>`<li>${esc(o)}</li>`).join("")}</ol>`:""}
-    ${blocks2html(l.body)}
-    ${extra}
+    ${segmentli(l,nazoratOtgan(u.login,l)).replace('@@TAIL@@',extra)}
+    ${nazoratSoni(l)?'':extra}
    </div>
-   <div class="card" style="margin-top:20px;background:var(--surface2)">
+   <div class="card" id="testkarta" style="margin-top:20px;background:var(--surface2)">
      <h3 style="margin-top:0">Bilimni tekshirish</h3>
-     ${!och ? `<div class="empty" style="margin:0">Test hozir yopiq. O'qituvchi darsni ochgandan keyin bu yerda test paydo bo'ladi.</div>` : `
-     <p class="sub" style="margin-bottom:12px">${p.test?`Natija: <b style="color:var(--ink)">${p.test.score}/${p.test.total}</b> · ${dstr(p.test.date)} · urinishlar: ${p.test.attempts}`:`Savollar bankdan tasodifiy tanlanadi va birma-bir beriladi. Test bir marta topshiriladi, har bir javobdan keyin izoh ko'rsatiladi.`}</p>
-     ${(!p.test || qaytaRuxsat(u.login,id))
-       ? `<button class="btn" id="totest">${p.test?"Qayta topshirish (ruxsat berilgan)":"Testni boshlash"}</button>`
-       : `<div class="msg ok" style="margin:0">Test topshirilgan. Qayta topshirish uchun o'qituvchi ruxsati kerak.</div>`}`}
+     <div id="tichki">${testIchki(u,l,p,och)}</div>
    </div>
    <div class="pager">
      <button class="btn ghost" id="prev" ${idx===0?"disabled":""}>← Oldingi</button>
@@ -5392,6 +5529,7 @@ function afterLesson(id){
   mountSims(document);
   const u=me(), p=lp(u.login,id), idx=LESSONS.indexOf(l);
   if($("#totest")) $("#totest").onclick=()=>go("#/test/"+id);
+  nazoratUlash(l);
   if($("#prev")) $("#prev").onclick=()=>go("#/lesson/"+LESSONS[idx-1].id);
   if($("#next")) $("#next").onclick=()=>go("#/lesson/"+LESSONS[idx+1].id);
   const gal=$("#imgs");
@@ -5448,6 +5586,8 @@ function vTest(id){
   const l=byId(id); if(!l) return page(`<div class="card"><div class="empty">Test topilmadi.</div></div>`);
   const u=me();
   if(!darsOchiq(u.login,id)) return page(`<div class="card"><div class="empty">Bu dars hozircha yopiq.</div></div>`);
+  if(!nazoratTugagan(u.login,l)) return page(`<div class="card"><h1>Avval darsni o'qing</h1><p class="sub">Testga o'tish uchun darsdagi o'qish nazoratlarini bajaring (${nazoratOtgan(u.login,l)} / ${nazoratSoni(l)}).</p><a class="btn" href="#/lesson/${id}">Darsga qaytish</a></div>`);
+  if(!BAHOLI()) return mashqSahifa(id);
   const pr=lp(u.login,id);
   if(pr.test && !qaytaRuxsat(u.login,id)) return page(`<div class="card"><h1>Test topshirilgan</h1>
     <p class="sub">${esc(l.title)}</p>
@@ -5483,6 +5623,11 @@ function vTest(id){
 
 function afterTest(id){
   const l=byId(id);
+  if(!BAHOLI()){
+    if($("#back")) $("#back").onclick=()=>go("#/lesson/"+id);
+    if($("#mstart")) $("#mstart").onclick=()=>mashqBoshla(id);
+    return;
+  }
   if($("#bk")){ $("#bk").onclick=()=>go("#/lesson/"+id); return; }
   if(!$("#tstart")) return;
   $("#back").onclick=()=>go("#/lesson/"+id);
@@ -5700,12 +5845,114 @@ async function testdanChiqish(){
   TEST=null;
 }
 
+/* =====================================================================
+   MASHQ REJIMI — testlar bahoga ta'sir qilmaydi
+   Savollar va variantlar brauzerda aralashtiriladi, to'g'ri javoblar
+   serverdan BITTA so'rov bilan olinadi. Jadvalga yozilmaydi: server yuki yo'q.
+   ===================================================================== */
+let MASHQ=null;
+
+function mashqSahifa(id){
+  const l=byId(id);
+  return page(`<h1>Mashq testi — ${esc(l.title)}</h1>
+   <div id="tzona"><div class="card">
+    <h3 style="margin-top:0">Mashq rejimi</h3>
+    <ol class="rules">
+     <li>Savollar <b>birma-bir</b> beriladi, har bir javobdan keyin <b>izoh</b> ko'rsatiladi.</li>
+     <li>Bu test <b>bahoga ta'sir qilmaydi</b> — mavzuni mustahkamlash uchun. Istagancha takrorlashingiz mumkin.</li>
+     <li>Savollar bankdan tasodifiy tanlanadi, variantlar har safar aralashadi.</li>
+     <li>Mashqda <b>60 % va undan yuqori</b> natija mavzuni o'zlashtirilgan deb hisoblanadi (imtihonga ruxsat uchun).</li>
+    </ol>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn" id="mstart">Mashqni boshlash</button>
+      <button class="btn ghost" id="back">Darsga qaytish</button>
+      <a class="btn ghost" href="${QUIZ_URL}" target="_blank" rel="noopener">Baholanuvchi test — QuizUz</a>
+    </div>
+   </div></div>`);
+}
+
+async function mashqBoshla(id){
+  const l=byId(id), tz=$("#tzona"), btn=$("#mstart");
+  if(btn){ btn.disabled=true; btn.textContent="Yuklanmoqda..."; }
+  try{
+    const bank=l.tests||[];
+    const idx=bank.map((_,i)=>i);
+    for(let i=idx.length-1;i>0;i--){ const j=rnd(i+1); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+    const tanlangan=idx.slice(0,Math.min(15,idx.length));
+    const r=await testSorov("mashq",{darsId:id,idx:tanlangan});
+    const savollar=r.items.map(it=>{
+      const q=bank[it.n];
+      const p=q.o.map((_,k)=>k);
+      for(let i=p.length-1;i>0;i--){ const j=rnd(i+1); [p[i],p[j]]=[p[j],p[i]]; }
+      return {n:it.n,p,a:p.indexOf(it.a),e:it.e};
+    });
+    MASHQ={id,savollar,idx:0,ball:0,javob:{}};
+    mashqChiz();
+  }catch(e){
+    tz.innerHTML=`<div class="card"><div class="msg bad">${esc(e.message)}</div>
+      <p class="sub">Mashq savollari uchun internet aloqasi kerak. Ma'ruza va simulyatorlar aloqasiz ham ishlaydi.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="mstart">Qayta urinib ko'rish</button>
+      <button class="btn ghost" id="back">Darsga qaytish</button></div></div>`;
+    afterTest(id);
+  }
+}
+
+function mashqChiz(){
+  const tz=$("#tzona"); if(!tz||!MASHQ) return;
+  const m=MASHQ, n=m.savollar.length;
+  if(m.idx>=n) return mashqYakun();
+  const q=m.savollar[m.idx], bank=byId(m.id).tests[q.n];
+  tz.innerHTML=`<div class="tbar">
+     <div class="tprog"><span style="width:${Math.round(m.idx/n*100)}%"></span></div>
+     <div class="tmeta"><b>${m.idx+1} / ${n}</b> savol <span class="tag">mashq</span></div></div>
+   <div class="card qcard">
+     <h4 class="qtext">${esc(bank.q)}</h4>
+     <div id="opts">${q.p.map((j,i)=>`<label class="opt" data-v="${i}"><input type="radio" name="tq" value="${i}"><span>${esc(bank.o[j])}</span></label>`).join("")}</div>
+     <div id="qres"></div><div id="qnav" style="margin-top:14px"></div>
+   </div>`;
+  $$("#opts .opt").forEach(o=>o.onclick=ev=>{ ev.preventDefault(); mashqJavob(+o.dataset.v); });
+}
+
+function mashqJavob(v){
+  const m=MASHQ; if(!m||m.javob[m.idx]!==undefined) return;
+  const q=m.savollar[m.idx], togri=(v===q.a);
+  m.javob[m.idx]=v; if(togri) m.ball++;
+  $$("#opts .opt").forEach(o=>{
+    const j=+o.dataset.v;
+    if(j===q.a) o.classList.add("right"); else if(j===v) o.classList.add("wrong");
+    const inp=$("input",o); if(inp) inp.disabled=true;
+  });
+  const res=$("#qres");
+  if(res) res.innerHTML=`<div class="msg ${togri?"ok":"bad"}">${togri?"To'g'ri":"Noto'g'ri"}</div>${q.e?`<div class="exp">${esc(q.e)}</div>`:""}`;
+  const nav=$("#qnav"), oxirgi=m.idx>=m.savollar.length-1;
+  nav.innerHTML=`<button class="btn" id="qnext">${oxirgi?"Mashqni yakunlash":"Keyingi savol →"}</button>`;
+  $("#qnext").onclick=()=>{ m.idx++; mashqChiz(); };
+}
+
+function mashqYakun(){
+  const tz=$("#tzona"); if(!tz||!MASHQ) return;
+  const m=MASHQ, u=me(), p=lp(u.login,m.id), jami=m.savollar.length;
+  const pc=Math.round(m.ball/jami*100), eski=p.mashq||{attempts:0,pct:0};
+  p.mashq={score:m.ball,total:jami,date:nowISO(),attempts:eski.attempts+1,pct:Math.max(eski.pct||0,pc)};
+  save();
+  tz.innerHTML=`<div class="card" style="text-align:center">
+     <div class="score" style="color:${pc>=60?"var(--ok)":"var(--bad)"}">${m.ball} / ${jami}</div>
+     <p class="sub">${pc}% · ${pc>=86?"a'lo":pc>=71?"yaxshi":pc>=60?"qoniqarli":"mavzuni qayta o'qib, takrorlang"}</p>
+     <p class="hint">Mashq natijasi bahoga ta'sir qilmaydi.</p>
+     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+       <button class="btn" id="m1">Yana mashq qilish</button>
+       <button class="btn ghost" id="m2">Darsga qaytish</button></div></div>`;
+  const id=m.id; MASHQ=null;
+  $("#m1").onclick=()=>go("#/test/"+id);
+  $("#m2").onclick=()=>go("#/lesson/"+id);
+}
+
 function vResults(){
   const u=me(), d=userData(u.login);
   const rows=LESSONS.map(l=>{ const p=d.progress[l.id];
     return `<tr><td>${l.sem}</td><td>${l.week}</td><td><span class="tag ${TYPE_CL[l.type]}">${TYPE_NM[l.type]}</span></td>
-     <td>${esc(l.title)}</td><td>${p&&p.test?`${p.test.score}/${p.test.total}`:"—"}</td>
-     <td>${p&&p.test?Math.round(p.test.score/p.test.total*100)+"%":"—"}</td><td>${p&&p.test?dstr(p.test.date):"—"}</td></tr>`;
+     <td>${esc(l.title)}</td><td>${tn(p)?`${tn(p).score}/${tn(p).total}`:"—"}</td>
+     <td>${tn(p)?Math.round(tn(p).score/tn(p).total*100)+"%":"—"}</td><td>${tn(p)?dstr(tn(p).date):"—"}</td></tr>`;
   }).join("");
   const ex=Object.keys(d.exam).map(s=>{ const e=d.exam[s];
     return `<tr><td>${s}-semestr</td><td>${e.variant}-variant</td><td>${e.score!=null?e.score+" ball":"baholanmagan"}</td><td>${dstr(e.date)}</td></tr>`;
@@ -5725,7 +5972,7 @@ function vResults(){
 }
 function afterResults(){ $("#csv").onclick=()=>{ const u=me(), d=userData(u.login);
   const rows=[["Semestr","Hafta","Tur","Mavzu","Ball","Maksimal","Foiz","Sana"]];
-  LESSONS.forEach(l=>{ const p=d.progress[l.id]; rows.push([l.sem,l.week,TYPE_NM[l.type],l.title,p&&p.test?p.test.score:"",p&&p.test?p.test.total:"",p&&p.test?Math.round(p.test.score/p.test.total*100):"",p&&p.test?dstr(p.test.date):""]); });
+  LESSONS.forEach(l=>{ const p=d.progress[l.id]; const q=tn(p); rows.push([l.sem,l.week,TYPE_NM[l.type],l.title,q?q.score:"",q?q.total:"",q?Math.round(q.score/q.total*100):"",q?dstr(q.date):""]); });
   downloadCSV(rows,`natijalar_${u.login}.csv`); }; }
 
 function vExam(){
@@ -6042,7 +6289,14 @@ function vAdmin(){
       : (Cloud.on ? (SERVER_ESKI ? `<div class="msg err"><b>Serverdagi Code.gs eski.</b> Bu yerdagi o'zgarishlar faqat shu qurilmada qoladi.
             Apps Script da <code>Code.gs</code> ni yangilang va <b>Deploy → New version</b> qiling.</div>` : "")
           : `<div class="msg err">Darslik server bilan bog'lanmagan — o'zgarishlar faqat shu qurilmada qoladi.</div>`);
-    body=`${ogoh}<div class="card"><h3 style="margin-top:0">Darslarni ochish va yopish</h3>
+    body=`${ogoh}<div class="card"><h3 style="margin-top:0">Testlar rejimi</h3>
+      <label class="ruxsat"><input type="checkbox" id="bahoToggle" ${BAHOLI()?"checked":""}>
+        <span class="nm"><b>Testlar bahoga ta'sir qilsin</b> (server nazoratidagi baholanuvchi test)</span></label>
+      <p class="sub">${BAHOLI()
+        ? "Yoniq: har bir javob serverda tekshiriladi va jadvalga yoziladi (ko'p talaba bir vaqtda ishlasa server sekinlashishi mumkin)."
+        : "O'chiq (tavsiya): testlar <b>mashq</b> — bahoga ta'sir qilmaydi, serverga deyarli yuk tushmaydi. Baholanuvchi test uchun"}
+        ${BAHOLI()?"":`<a href="${QUIZ_URL}" target="_blank" rel="noopener">QuizUz</a> platformasidan foydalaning.`}</p></div>
+      <div class="card"><h3 style="margin-top:0">Darslarni ochish va yopish</h3>
       <p class="sub">Belgi qo'yilgan dars barcha talabalarga ochiq. Belgini olib tashlasangiz, dars yopiladi va talabalar uni ocholmaydi.
       Hozir yopiq: <b>${yopiq}</b> ta mashg'ulot.</p>
       <div class="row" style="margin-bottom:12px">
@@ -6181,6 +6435,8 @@ function afterAdmin(){
   if($("#gfil")) $("#gfil").onchange=()=>{ ADMIN_GROUP=$("#gfil").value; render(); };
 
   /* darslarga ruxsat */
+  if($("#bahoToggle")) $("#bahoToggle").onchange=e=>{ ruxsatBer("CFG:BAHO", e.target.checked);
+    toast(e.target.checked?"Testlar bahoga ta'sir qiladi":"Testlar mashq rejimiga o'tdi"); render(); };
   $$("[data-lesson]").forEach(c=>c.onchange=()=>{ ruxsatBer(c.dataset.lesson, c.checked);
     toast((c.checked?"Dars ochildi":"Dars yopildi")+(Cloud.on&&cred().pw?" va serverga saqlandi":"")); });
   $$("[data-week]").forEach(b=>b.onclick=()=>{ const [sem,w,h]=b.dataset.week.split("|");
@@ -6387,11 +6643,11 @@ window.addEventListener("hashchange",render);
        o'qituvchi darsni ochsa yoki yopsa, qayta kirmasdan ham ta'sir qiladi. */
     const yangila=()=>{
       const u=me(); if(!u || u.role==="admin") return;
-      if(testKetmoqda()) return;
+      if(testKetmoqda()||MASHQ) return;
       const c=cred(); if(!c.pw) return;
       const eski=JSON.stringify(S.access);
       cloudPullMe(u.login, c.pw).then(()=>{
-        if(testKetmoqda()) return;          /* test ketmoqda — sahifani buzmaymiz */
+        if(testKetmoqda()||MASHQ) return;          /* test ketmoqda — sahifani buzmaymiz */
         if(JSON.stringify(S.access)!==eski && /^#\/(sem|dash|exam|lesson|test)/.test(location.hash||"")) render();
       }).catch(()=>{});
     };

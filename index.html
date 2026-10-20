@@ -5717,6 +5717,10 @@ async function javobYubor(v){
     belgila(r.togriPos, v, r.togri, r.izoh);
   }catch(e){
     TEST.band=false;
+    if(/allaqachon qayd/.test(e.message||"")){        /* server bu savolni oldin yopgan (oyna almashtirilgan) */
+      TEST.javoblar[i]={v:-1,ok:false}; TEST.bekorlar[i]=1;
+      return bekorKorsat();
+    }
     $$("#opts input").forEach(x=>x.disabled=false);
     if(sel) sel.classList.remove("tanlangan");
     if(res) res.innerHTML=`<div class="msg bad">${esc(e.message)} — javob qayd etilmadi, qaytadan belgilang.</div>`;

@@ -5643,6 +5643,8 @@ async function testBoshla(id){
   const btn=$("#tstart"); if(btn){ btn.disabled=true; btn.textContent="Savollar olinmoqda..."; }
   try{
     const r=await testSorov("testBoshla",{darsId:id});
+    if(!Array.isArray(r.kalit)||r.kalit.length!==(r.savollar||[]).length)
+      throw new Error("Server eski versiyada: Code.gs yangilanmagan. O'qituvchi Code.gs va Javoblar.gs ni yangi versiya (New version) qilib joylashi kerak.");
     TEST={ id, tok:r.tok, kalit:r.kalit||[], savollar:r.savollar||[], javoblar:{}, bekorlar:{},
            chiqish:r.chiqish||0, idx:0, band:false, tugadi:false, boshlandi:Date.now() };
     (r.javoblar||[]).forEach(j=>{

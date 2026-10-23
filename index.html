@@ -5142,6 +5142,9 @@ async function cloudPullMe(login, pw){
 /* =====================================================================
    KONTENTNI CHIZISH
    ===================================================================== */
+/* chiqishlar soni ko'rsatilganda 5 dan oshsa ">5" (katta sonlar chalg'itmasin) */
+const cx = n => (+n||0) > 5 ? "&gt;5" : String(+n||0);
+const cxT = n => (+n||0) > 5 ? ">5" : (+n||0);
 function blocks2html(bl){
   let h="";
   for(const b of bl){
@@ -5609,7 +5612,7 @@ function vTest(id){
             <b>yangi sonlar bilan</b> tuziladi — hisoblashni o'zingiz bajarasiz.</li>
         <li>Test <b>bir marta</b> topshiriladi. Yarim yo'lda to'xtatsangiz, qaytib kirganda
             xuddi shu savollar davom etadi.</li>
-        <li>Javoblar va baho <b>serverda</b> hisoblanadi.</li>
+        <li>Barcha javoblaringiz test oxirida <b>bir marta</b> serverga yuboriladi, baho serverda qayd etiladi. Aloqa uzilmasligi uchun test davomida internet yoqilgan bo'lsin.</li>
       </ol>
       <div class="msg warn" style="margin-bottom:0">Testni boshlashdan oldin ma'ruzani o'qib chiqing:
         savollar faqat shu dars matnidan va simulyatorlar bilan ishlash natijasidan tuzilgan.</div>
@@ -5640,7 +5643,7 @@ async function testBoshla(id){
   const btn=$("#tstart"); if(btn){ btn.disabled=true; btn.textContent="Savollar olinmoqda..."; }
   try{
     const r=await testSorov("testBoshla",{darsId:id});
-    TEST={ id, tok:r.tok, savollar:r.savollar||[], javoblar:{}, bekorlar:{},
+    TEST={ id, tok:r.tok, kalit:r.kalit||[], savollar:r.savollar||[], javoblar:{}, bekorlar:{},
            chiqish:r.chiqish||0, idx:0, band:false, tugadi:false, boshlandi:Date.now() };
     (r.javoblar||[]).forEach(j=>{
       TEST.javoblar[j.i]={ v:j.v, ok:!!Number(j.ok) };
@@ -5685,7 +5688,7 @@ function qChiz(){
   tz.innerHTML=`<div class="tbar">
      <div class="tprog"><span style="width:${foiz}%"></span></div>
      <div class="tmeta"><b>${TEST.idx+1} / ${n}</b> savol
-       ${TEST.chiqish?`<span class="tag bad">${TEST.chiqish} ta chiqish qayd etildi</span>`:""}</div>
+       ${TEST.chiqish?`<span class="tag bad">${cx(TEST.chiqish)} ta chiqish qayd etildi</span>`:""}</div>
    </div>
    <div class="card qcard">
      <h4 class="qtext">${esc(matn)}</h4>
@@ -5701,30 +5704,16 @@ function qChiz(){
 }
 
 /* ---------- javobni serverga yuborish ---------- */
-async function javobYubor(v){
+function javobYubor(v){
   if(!TEST||TEST.band) return;
   const i=TEST.idx;
   if(TEST.javoblar[i]!==undefined) return;
-  TEST.band=true;
-  const sel=$(`#opts .opt[data-v="${v}"]`); if(sel) sel.classList.add("tanlangan");
+  const k=TEST.kalit[i];
+  if(!k){ const res=$("#qres"); if(res) res.innerHTML=`<div class="msg bad">Javob kaliti topilmadi — testni qaytadan oching.</div>`; return; }
+  const ok = v===k.a;
+  TEST.javoblar[i]={v,ok};
   $$("#opts input").forEach(x=>x.disabled=true);
-  const res=$("#qres"); if(res) res.innerHTML=`<p class="hint">Javob serverga yuborilmoqda...</p>`;
-  try{
-    const r=await testSorov("testJavob",{tok:TEST.tok,i,v});
-    TEST.javoblar[i]={v,ok:r.togri};
-    TEST.band=false;
-    if(TEST.bekorlar[i]) return;                     /* oraliqda bekor qilingan */
-    belgila(r.togriPos, v, r.togri, r.izoh);
-  }catch(e){
-    TEST.band=false;
-    if(/allaqachon qayd/.test(e.message||"")){        /* server bu savolni oldin yopgan (oyna almashtirilgan) */
-      TEST.javoblar[i]={v:-1,ok:false}; TEST.bekorlar[i]=1;
-      return bekorKorsat();
-    }
-    $$("#opts input").forEach(x=>x.disabled=false);
-    if(sel) sel.classList.remove("tanlangan");
-    if(res) res.innerHTML=`<div class="msg bad">${esc(e.message)} — javob qayd etilmadi, qaytadan belgilang.</div>`;
-  }
+  belgila(k.a, v, ok, k.e);
 }
 
 /* javob natijasini ko'rsatish */
@@ -5759,38 +5748,21 @@ function keyingiTugma(){
 
 /* ---------- oyna almashtirildi ---------- */
 let OYNA_BAND=false;
-async function oynaOzgardi(){
-  if(!testKetmoqda()||OYNA_BAND) return;
+function oynaOzgardi(){
+  if(!testKetmoqda()) return;
   if(Date.now()-TEST.boshlandi<400) return;          /* boshlanishdagi tasodifiy hodisa */
   const i=TEST.idx;
   const ochiq = i<TEST.savollar.length && TEST.javoblar[i]===undefined;
-  OYNA_BAND=true;
-  try{
-    const r=await testSorov("testOyna",{tok:TEST.tok,i});
-    TEST.chiqish=r.chiqish||TEST.chiqish+1;
-    if(r.bekor){
-      TEST.bekorlar[i]=true;
-      TEST.javoblar[i]={v:-1,ok:false};
-      bekorKorsat();
-    }
+  TEST.chiqish=(TEST.chiqish||0)+1;
+  if(ochiq){
+    TEST.bekorlar[i]=true;
+    TEST.javoblar[i]={v:-1,ok:false};
+    bekorKorsat();
+  } else {
     const tm=$(".tmeta");
-    if(tm && !r.bekor) tm.innerHTML=`<b>${TEST.idx+1} / ${TEST.savollar.length}</b> savol
-      <span class="tag bad">${TEST.chiqish} ta chiqish qayd etildi</span>`;
-  }catch(e){
-    /* serverga yetib bormadi — savolni mahalliy ravishda bloklaymiz va
-       qayta urinamiz: tasdiqlanmagan chiqish bilan testni davom ettirib bo'lmaydi */
-    if(ochiq){
-      TEST.bekorlar[i]=true;
-      const res=$("#qres");
-      $$("#opts input").forEach(x=>x.disabled=true);
-      if(res) res.innerHTML=`<div class="msg bad"><b>Bu savol bekor qilindi</b> (oyna almashtirildi).
-        Aloqa tiklanganda serverga qayd etiladi.</div>`;
-      OYNA_BAND=false;
-      setTimeout(()=>{ if(testKetmoqda()&&TEST.bekorlar[i]&&TEST.javoblar[i]===undefined) oynaOzgardi(); }, 5000);
-      return;
-    }
+    if(tm) tm.innerHTML=`<b>${Math.min(TEST.idx+1,TEST.savollar.length)} / ${TEST.savollar.length}</b> savol
+      <span class="tag bad">${cx(TEST.chiqish)} ta chiqish qayd etildi</span>`;
   }
-  OYNA_BAND=false;
 }
 
 function kuzatuvniYoq(){
@@ -5811,7 +5783,8 @@ async function testYakunla(){
   const id=TEST.id, l=byId(id), u=me();
   tz.innerHTML=`<div class="card"><p class="hint">Natija hisoblanmoqda...</p></div>`;
   try{
-    const r=await testSorov("testTugat",{tok:TEST.tok,tur:TYPE_NM[l.type],mavzu:l.title});
+    const jv=Object.keys(TEST.javoblar).map(i=>({i:+i, v:TEST.javoblar[i].v, b:TEST.bekorlar[i]?1:0}));
+    const r=await testSorov("testTopshir",{tok:TEST.tok,javoblar:jv,chiqish:TEST.chiqish||0,tur:TYPE_NM[l.type],mavzu:l.title});
     TEST.tugadi=true;
     const p=lp(u.login,id);
     const prev=p.test?p.test.attempts:0;
@@ -5824,7 +5797,7 @@ async function testYakunla(){
       <p class="sub">${pc}% · ${pc>=86?"a'lo":pc>=71?"yaxshi":pc>=60?"qoniqarli":"takrorlash tavsiya etiladi"}</p>
       ${r.bekor?`<div class="msg warn">Oyna almashtirilgani uchun ${r.bekor} ta savol bekor qilindi.
          Bu savollarga ball berilmadi va holat o'qituvchiga ko'rinadi.</div>`:""}
-      ${r.chiqish?`<p class="hint">Test davomida ${r.chiqish} marta sahifadan chiqish qayd etildi.</p>`:""}
+      ${r.chiqish?`<p class="hint">Test davomida ${cx(r.chiqish)} marta sahifadan chiqish qayd etildi.</p>`:""}
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button class="btn ghost" id="b2">Darsga qaytish</button>
         <button class="btn ghost" id="b3">Natijalarim</button></div></div>`;
@@ -5842,10 +5815,12 @@ async function testYakunla(){
 async function testdanChiqish(){
   if(!testKetmoqda()) return;
   const i=TEST.idx;
-  if(i<TEST.savollar.length && TEST.javoblar[i]===undefined){
-    try{ await testSorov("testOyna",{tok:TEST.tok,i}); }catch(e){}
-    toast("Testdan chiqdingiz — ochiq savol bekor qilindi");
-  }
+  if(i<TEST.savollar.length && TEST.javoblar[i]===undefined){ TEST.bekorlar[i]=true; TEST.javoblar[i]={v:-1,ok:false}; TEST.chiqish=(TEST.chiqish||0)+1; }
+  /* kalit brauzerda bo'lgani uchun testni tashlab ketib qaytish mumkin emas: shu paytgacha berilgan javoblar topshiriladi */
+  const jv=Object.keys(TEST.javoblar).map(k=>({i:+k, v:TEST.javoblar[k].v, b:TEST.bekorlar[k]?1:0}));
+  const l=byId(TEST.id);
+  try{ await testSorov("testTopshir",{tok:TEST.tok,javoblar:jv,chiqish:TEST.chiqish||0,tur:TYPE_NM[l.type],mavzu:l.title}); }catch(e){}
+  toast("Testdan chiqdingiz — berilgan javoblar topshirildi");
   TEST=null;
 }
 
@@ -6219,7 +6194,7 @@ function vAdmin(){
       ${LESSONS.map(l=>{ const p=userData(u.login).progress[l.id];
         if(!(p&&p.test)) return `<td style="text-align:center">—</td>`;
         const t=p.test, yax=t.total?t.score/t.total>=0.6:false;
-        const belgi=(t.bekor||t.chiqish)?`<sup title="${t.chiqish||0} ta chiqish, ${t.bekor||0} ta bekor savol" style="color:var(--bad)">!</sup>`:"";
+        const belgi=(t.bekor||t.chiqish)?`<sup title="${cx(t.chiqish||0)} ta chiqish, ${t.bekor||0} ta bekor savol" style="color:var(--bad)">!</sup>`:"";
         return `<td style="text-align:center"><b style="color:${yax?"var(--ok)":"var(--bad)"}">${t.score}</b>${belgi}</td>`; }).join("")}
       <td><b>${avgScore(u.login)}%</b></td></tr>`).join("")||`<tr><td><div class="empty">Ma'lumot yo'q</div></td></tr>`}</tbody></table></div></div>`;
   }
@@ -6251,7 +6226,7 @@ function vAdmin(){
      <div class="grid g3">
       <div class="stat"><b>${urinish}</b><span>Topshirilgan testlar</span></div>
       <div class="stat"><b style="color:${chiqishli?"var(--bad)":"var(--ok)"}">${chiqishli}</b><span>Chiqish qayd etilgan testlar</span></div>
-      <div class="stat"><b>${chiqishJami}</b><span>Jami chiqishlar</span></div>
+      <div class="stat"><b>${cx(chiqishJami)}</b><span>Jami chiqishlar</span></div>
       <div class="stat"><b style="color:${bekorJami?"var(--bad)":"var(--ok)"}">${bekorJami}</b><span>Bekor qilingan savollar</span></div>
       <div class="stat"><b>${ochiq.length}</b><span>Tugatilmagan testlar</span></div>
       <div class="stat"><b>${urinish?Math.round(chiqishli/urinish*100):0}%</b><span>Chiqishli testlar ulushi</span></div>
@@ -6263,7 +6238,7 @@ function vAdmin(){
         <td>${esc(x.u.familiya)} ${esc(x.u.ism)}</td><td>${esc(x.u.guruh)}</td>
         <td><span class="tag ${TYPE_CL[x.l.type]}">${TYPE_NM[x.l.type]} ${x.l.no}</span> ${esc(x.l.title.slice(0,46))}${x.l.title.length>46?"…":""}</td>
         <td>${x.t.score}/${x.t.total}</td>
-        <td style="text-align:center"><b style="color:var(--warn)">${x.t.chiqish||0}</b></td>
+        <td style="text-align:center"><b style="color:var(--warn)">${cx(x.t.chiqish||0)}</b></td>
         <td style="text-align:center"><b style="color:var(--bad)">${x.t.bekor||0}</b></td>
         <td>${dstr(x.t.date)}</td>
         <td><button class="btn sm ghost" data-u="${esc(x.u.login)}">Batafsil</button></td></tr>`).join("")
@@ -6276,7 +6251,7 @@ function vAdmin(){
       <tbody>${ochiq.length?ochiq.map(o=>{ const u=byLogin(o.login)||{familiya:o.login,ism:""}, l=byId(o.darsId);
         return `<tr><td>${esc(u.familiya)} ${esc(u.ism||"")}</td>
          <td>${l?esc(TYPE_NM[l.type]+" "+l.no+" — "+l.title.slice(0,40)):esc(o.darsId)}</td>
-         <td>${dstr(o.boshlangan)}</td><td style="text-align:center">${o.chiqish}</td>
+         <td>${dstr(o.boshlangan)}</td><td style="text-align:center">${cx(o.chiqish)}</td>
          <td style="text-align:center">${o.bekor}</td>
          <td><button class="btn sm danger" data-bekor="${esc(o.login)}|${esc(o.darsId)}">Seansni bekor qilish</button></td></tr>`;
         }).join("")
@@ -6473,7 +6448,7 @@ function afterAdmin(){
     downloadCSV(r,"talabalar.csv"); };
   if($("#e2")) $("#e2").onclick=()=>{ const r=[["Talaba","Guruh","Semestr","Hafta","Tur","Mavzu","Ball","Maksimal","Foiz","Urinish","Oynadan chiqish","Bekor qilingan savol","Sana"]];
     students().forEach(u=>LESSONS.forEach(l=>{ const p=userData(u.login).progress[l.id]; if(p&&p.test)
-      r.push([`${u.familiya} ${u.ism}`,u.guruh,l.sem,l.week,TYPE_NM[l.type],l.title,p.test.score,p.test.total,Math.round(p.test.score/p.test.total*100),p.test.attempts,p.test.chiqish||0,p.test.bekor||0,dstr(p.test.date)]); }));
+      r.push([`${u.familiya} ${u.ism}`,u.guruh,l.sem,l.week,TYPE_NM[l.type],l.title,p.test.score,p.test.total,Math.round(p.test.score/p.test.total*100),p.test.attempts,cxT(p.test.chiqish||0),p.test.bekor||0,dstr(p.test.date)]); }));
     downloadCSV(r,"test_natijalari.csv"); };
   if($("#e3")) $("#e3").onclick=()=>{ const r=[["Talaba","Guruh","Semestr","Variant","Savol","Javob","Ball","Sana"]];
     students().forEach(u=>{ const d=userData(u.login); [1,2].forEach(s=>{ const e=d.exam[s]; if(!e) return;
@@ -6497,7 +6472,7 @@ function showStudent(lg){
   const rows=LESSONS.map(l=>{ const p=d.progress[l.id], t=p&&p.test;
     return `<tr><td>${TYPE_NM[l.type]} ${l.no}</td><td>${esc(l.title)}</td>
      <td>${t?`${t.score}/${t.total}`:"—"}</td>
-     <td style="text-align:center">${t?(t.chiqish||0):"—"}</td>
+     <td style="text-align:center">${t?cx(t.chiqish||0):"—"}</td>
      <td style="text-align:center">${t?((t.bekor||0)?`<b style="color:var(--bad)">${t.bekor}</b>`:"0"):"—"}</td>
      <td>${p&&p.tasks?"bor":"—"}</td><td>${p?p.images.length:0}</td></tr>`; }).join("");
   const chiqishJami=LESSONS.reduce((a,l)=>{ const t=(d.progress[l.id]||{}).test; return a+(t&&t.chiqish||0); },0);
@@ -6512,7 +6487,7 @@ function showStudent(lg){
     <div class="stat"><b>${progressOf(lg,1)}%</b><span>1-semestr</span></div>
     <div class="stat"><b>${progressOf(lg,2)}%</b><span>2-semestr</span></div>
     <div class="stat"><b>${avgScore(lg)}%</b><span>O'rtacha</span></div></div>
-   ${(chiqishJami||bekorJami)?`<div class="msg warn">Test paytida <b>${chiqishJami}</b> marta oyna almashtirilgan;
+   ${(chiqishJami||bekorJami)?`<div class="msg warn">Test paytida <b>${cx(chiqishJami)}</b> marta oyna almashtirilgan;
       shu sababli <b>${bekorJami}</b> ta savol bekor qilingan.</div>`:`<div class="msg ok">Testlar oyna almashtirilmasdan topshirilgan.</div>`}
    <div class="scroll"><table><thead><tr><th>Mashg'ulot</th><th>Mavzu</th><th>Test</th>
      <th title="Test paytida sahifadan chiqish soni">Chiqish</th>
